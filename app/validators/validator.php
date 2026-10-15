@@ -3,14 +3,14 @@
 class Validator {
     // String Validation
     protected static function requiredCheck($data): bool {
-        if(!isset($data)) return false;
+        if(!isset($data) || is_null($data)) return false;
         else if(is_string($data) && strlen(trim($data)) < 1) return false;
         return true;
     }
 
     protected static function emailCheck($data): bool {
-        if(!is_string($data) && !filter_var($data, FILTER_VALIDATE_EMAIL)) return false;
-        return true;
+        if(filter_var($data, FILTER_VALIDATE_EMAIL)) return true;
+        return false;
     }
 
     protected static function minmaxCheck($data, array $matches): bool {
@@ -30,7 +30,7 @@ class Validator {
     protected static function enumCheck($data, array $matches): bool {
         $list = explode(",", $matches[1]);
 
-        if(!is_string($data) || !in_array($list, $data)) return false;
+        if(!is_string($data) || !in_array($data, $list)) return false;
         return true;
     }
 
@@ -85,10 +85,10 @@ class Validator {
     protected static function mimeCheck($data, array $matches): bool {
         $list = explode(",", $matches[1]);
 
-        if(!is_array($data["type"]) && !in_array($list, $data['type'])) return false;
+        if(!is_array($data["type"]) && !in_array($data['type'], $list)) return false;
         else if(is_array($data["type"])) {
             foreach($data["type"] as $type) {
-                if(!in_array($list, $type)) return false;
+                if(!in_array($type, $list)) return false;
             }
         }
         return true;
@@ -96,9 +96,12 @@ class Validator {
 
     // Validation method
     public static function validate($data, array $rules): ?string {
+        $has_required = in_array("required", array_keys($rules));
+
         foreach($rules as $rule => $message) {
             // Type Validation
             if($rule == "required" && !self::requiredCheck($data)) return $message;
+            else if(!$has_required && (!isset($data) || is_null($data))) return null; // ignore if empty and not required
             else if($rule == "string" && !is_string($data)) return $message;
             else if($rule == "int" && !is_int($data)) return $message;
             else if($rule == "float" && !is_float($data)) return $message;
@@ -139,8 +142,8 @@ class Validator {
             $is_file = strlen($field) > 5 && preg_match("/^file:(.+)$/", $field, $file_field_match);
             $validationResult = self::validate(
                 $is_file
-                    ? $_FILES[$file_field_match[1]]
-                    : $_REQUEST[$field]
+                    ? ($_FILES[$file_field_match[1]] ?: null)
+                    : ($_REQUEST[$field] ?: null)
                 , $rules
             );
 
