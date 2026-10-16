@@ -16,12 +16,12 @@ class Storage {
     }
 
     public static function put(string $path, string $content): bool {
-        if(file_put_contents($file, $dest)) return true;
+        if(file_put_contents($path, $content)) return true;
         return false;
     }
 
-    public static function save(array $file, string $dest): bool {
-        if(move_uploaded_file($file, $dest)) return true;
+    public static function save(string $from, string $dest): bool {
+        if(move_uploaded_file($from, $dest)) return true;
         return false;
     }
 }
