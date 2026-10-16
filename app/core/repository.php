@@ -1,0 +1,59 @@
+<?php declare(strict_types=1);
+
+class Repository {
+    protected static string $table = "example";
+    protected static string $idColumn = "id";
+    protected static array $fillable = [];
+
+    public static function findAll(): array {
+        $table = static::$table;
+        return DB::query("SELECT * FROM $table")->fetchAll();
+    }
+
+    public static function findOneById(string $id): mixed {
+        $table = static::$table;
+        $idColumn = static::$idColumn;
+        return DB::query("SELECT * FROM $table WHERE $idColumn=? LIMIT 1", [$id])->fetch();
+    }
+
+    public static function find(array $data): array {
+        $table = static::$table;
+        $m_whereClause = array_map(
+            fn ($col) => "$col=:$col",
+            array_keys($data)
+        );
+        $whereClause = implode(" AND ", $m_whereClause);
+
+        return DB::query("SELECT * FROM $table WHERE $whereClause", $data)->fetchAll();
+    }
+
+    public static function insert(array $data): PDOStatement {
+        $table = static::$table;
+        $cols = implode(", ", static::$fillable);
+        $params = implode(", ",
+            array_map(
+                fn () => "?",
+                static::$fillable
+            )
+        );
+
+        return DB::query("INSERT INTO $table ($cols) VALUES ($params)", $data);
+    }
+
+    public static function update(string $id, array $data): PDOStatement {
+        $table = static::$table;
+        $idColumn = static::$idColumn;
+        $cols = implode(", ",
+            array_map(
+                fn ($col) => "$col=:$col",
+                static::$fillable
+            )
+        );
+
+        return DB::query("UPDATE $table SET $cols WHERE $idColumn=?", [...$data, $id]);
+    }
+
+    public static function delete(string $id): PDOStatement {
+        return DB::query("DELETE FROM ${static::$table} WHERE ${static::$idColumn}=?", [$id]);
+    }
+}
