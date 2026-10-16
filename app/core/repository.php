@@ -27,6 +27,17 @@ class Repository {
         return DB::query("SELECT * FROM $table WHERE $whereClause", $data)->fetchAll();
     }
 
+    public static function findOne(array $data): array {
+        $table = static::$table;
+        $m_whereClause = array_map(
+            fn ($col) => "$col=:$col",
+            array_keys($data)
+        );
+        $whereClause = implode(" AND ", $m_whereClause);
+
+        return DB::query("SELECT * FROM $table WHERE $whereClause LIMIT 1", $data)->fetch();
+    }
+
     public static function insert(array $data): PDOStatement {
         $table = static::$table;
         $cols = implode(", ", static::$fillable);
