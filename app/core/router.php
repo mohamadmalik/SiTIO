@@ -18,13 +18,13 @@ class Router {
         $uri = parse_url($_SERVER['REQUEST_URI']);
         $base = trim(dirname($_SERVER['SCRIPT_NAME']));
         $absPath = rtrim($uri['path'], "/");
-        $path = "/" . substr($absPath, strlen($base));
+        $path = "/" . trim(substr($absPath, strlen($base)), "/");
 
         define("BASE_URL", $base);
 
         // Find match url
         foreach($this->routes[$method] as $route => $handler) {
-            if($route == $path) return $handler();
+            if($route == $path) return $handler(new Request());
             $routePattern = preg_replace("/\//", "\\/", $route);
             $routePattern = preg_replace("/:\w+/", "(.+)", $routePattern);
 
@@ -36,7 +36,7 @@ class Router {
                     $_SERVER["URL_PARAM"][$field] = $matches[$i];
                 }
 
-                return $handler();
+                return $handler(new Request());
             }
         }
 

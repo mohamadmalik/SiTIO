@@ -1,15 +1,30 @@
 <?php declare(strict_types=1);
 
 class Request {
+    protected array $headers = [];
+
+    public function __construct() {
+        if($this->headers = getallheaders()) return;
+        else if($this->headers = apache_request_headers()) return;
+    }
+
+    public function header(string $field): ?string {
+        return $this->headers[$field];
+    }
+
+    public function param(string $field): ?string {
+        return $_SERVER["URL_PARAM"][$field];
+    }
+
     public function all(): array {
         return [...$_REQUEST, ...$_FILES];
     }
 
-    public function get(string $field): string|int|float {
+    public function get(string $field): mixed {
         return $_GET[$field];
     }
 
-    public function post(string $field): string|int|float {
+    public function post(string $field): mixed {
         return $_POST[$field];
     }
 
