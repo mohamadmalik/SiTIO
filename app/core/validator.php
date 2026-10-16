@@ -2,13 +2,13 @@
 
 class Validator {
     // String Validation
-    protected static function requiredCheck($data): bool {
+    protected static function requiredCheck(mixed $data): bool {
         if(!isset($data) || is_null($data)) return false;
         else if(is_string($data) && strlen(trim($data)) < 1) return false;
         return true;
     }
 
-    protected static function emailCheck($data): bool {
+    protected static function emailCheck(mixed $data): bool {
         if(filter_var($data, FILTER_VALIDATE_EMAIL)) return true;
         return false;
     }
