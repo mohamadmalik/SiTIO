@@ -19,12 +19,19 @@ class Repository {
     public static function find(array $data): array {
         $table = static::$table;
         $m_whereClause = array_map(
-            fn ($col) => "$col=:$col",
+            fn ($col) => !is_array($data[$col])
+                ? "$col=:$col" // exact
+                : "$col {$data[$col][0]} :$col", // <, >, <=, >=, LIKE, ...
             array_keys($data)
         );
         $whereClause = implode(" AND ", $m_whereClause);
 
-        return DB::query("SELECT * FROM $table WHERE $whereClause", $data)->fetchAll();
+        $m_data = array_map(
+            fn ($val) => !is_array($val) ? $val : $val[1],
+            array_values($data)
+        );
+
+        return DB::query("SELECT * FROM $table WHERE $whereClause", $m_data)->fetchAll();
     }
 
     public static function findOne(array $data): array {
