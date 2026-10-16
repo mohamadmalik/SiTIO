@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 require_once __DIR__ . "/app/core/database.php";
 require_once __DIR__ . "/app/core/storage.php";
@@ -9,7 +9,10 @@ require_once __DIR__ . "/app/core/controller.php";
 require_once __DIR__ . "/app/core/router.php";
 
 $router = new Router();
-$router->get("/:a/:b/:c", function() {
+$router->get("/", function() {
+    var_dump("Home");
+});
+$router->get("/:abc", function() {
     var_dump($_SERVER["URL_PARAM"]);
 });
 $router->run();
