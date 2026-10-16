@@ -27,6 +27,21 @@ class DB {
         return self::$pdo;
     }
 
+    public static function beginTransaction() {
+        $pdo = self::getConnection();
+        $pdo->beginTransaction();
+    }
+
+    public static function commit() {
+        $pdo = self::getConnection();
+        $pdo->commit();
+    }
+
+    public static function rollBack() {
+        $pdo = self::getConnection();
+        $pdo->rollBack();
+    }
+
     public static function query(string $sql="", array $parameter=[]): PDOStatement {
         $pdo = self::getConnection();
         $stmt = $pdo->prepare($sql);
