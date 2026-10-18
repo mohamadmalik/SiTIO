@@ -29,6 +29,17 @@ class Request {
     }
 
     public function file(string $field): array {
-        return $_FILES[$field];
+        $m_files = $_FILES[$field];
+        if(!is_array($m_files)) return $m_files;
+
+        $files = array();
+        $keys = array_keys($m_files);
+        for($i = 0; $i < count($m_files["name"]); $i++) {
+            foreach($keys as $k) {
+                $files[$i][$k] = $m_files[$k][$i];
+            }
+        }
+
+        return $files;
     }
 }
