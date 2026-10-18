@@ -46,8 +46,14 @@ class Repository {
     }
 
     public static function insert(array $data): PDOStatement {
+        $keys = array_keys($data);
+        $m_diff = array_diff($keys, static::$fillable);
+        $diff = array_diff($m_diff, static::$fillable);
+        if(count($diff) > 0)
+            throw new ErrorException("Invalid column " . implode(", ", $diff) . " while insert.");
+
         $table = static::$table;
-        $cols = implode(", ", static::$fillable);
+        $cols = implode(", ", $keys);
         $params = implode(", ",
             array_map(
                 fn () => "?",
@@ -59,12 +65,18 @@ class Repository {
     }
 
     public static function update(string $id, array $data): PDOStatement {
+        $keys = array_keys($data);
+        $m_diff = array_diff($keys, static::$fillable);
+        $diff = array_diff($m_diff, static::$fillable);
+        if(count($diff) > 0)
+            throw new ErrorException("Invalid column " . implode(", ", $diff) . " while update.");
+
         $table = static::$table;
         $idColumn = static::$idColumn;
         $cols = implode(", ",
             array_map(
                 fn ($col) => "$col=:$col",
-                static::$fillable
+                $keys
             )
         );
 
@@ -72,6 +84,8 @@ class Repository {
     }
 
     public static function delete(string $id): PDOStatement {
-        return DB::query("DELETE FROM ${static::$table} WHERE ${static::$idColumn}=?", [$id]);
+        $table = static::$table;
+        $idColumn = static::$idColumn;
+        return DB::query("DELETE FROM $table WHERE $idColumn=?", [$id]);
     }
 }

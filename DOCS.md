@@ -504,8 +504,8 @@ child class's configuration.
 | `findOneById` | `findOneById(string $id): mixed` | `array\|false` | Row by primary key (`LIMIT 1`) |
 | `find` | `find(array $data): array` | `array` | Rows matching **all** given conditions (AND) |
 | `findOne` | `findOne(array $data): array` | `array\|false` | First row matching the conditions |
-| `insert` | `insert(array $data): PDOStatement` | statement | Insert one row using `$fillable` |
-| `update` | `update(string $id, array $data): PDOStatement` | statement | Update row by primary key using `$fillable` |
+| `insert` | `insert(array $data): PDOStatement` | statement | Insert one row; columns come from the **keys** of `$data` (must be in `$fillable`) |
+| `update` | `update(string $id, array $data): PDOStatement` | statement | Update row by primary key; only the given (fillable) columns are set |
 | `delete` | `delete(string $id): PDOStatement` | statement | Delete row by primary key |
 
 ### 7.3 Usage
@@ -528,13 +528,34 @@ Conditions are always combined with `AND`.
 
 ### 7.4 Insert / update constraints
 
+Both methods build their column list **from the keys of `$data`** and require
+those keys to be members of `$fillable`. Passing any other column throws an
+`ErrorException` (`Invalid column <name> while insert.` / `... while update.`).
+Values are bound positionally in the order of the array, so associative keys
+must always be used — never a plain list.
+
 ```php
-// insert(): values are bound positionally — provide them IN THE $fillable ORDER.
-UserRepository::insert(["Budi", "budi@mail.com", "secret"]);
+// insert(): keys become the column list; every key must be in $fillable.
+UserRepository::insert([
+    "name"  => "Budi",
+    "email" => "budi@mail.com",
+    "password" => "secret",
+]);
 // INSERT INTO users (name, email, password) VALUES (?, ?, ?)
 
-// update(): binds NAMED parameters for every $fillable column,
-// so ALL fillable columns must be present in $data.
+// Partial insert is allowed — only the given columns are written.
+UserRepository::insert(["name" => "Budi"]);
+// INSERT INTO users (name) VALUES (?)
+
+// Non-fillable key -> ErrorException
+UserRepository::insert(["role" => "admin"]);   // throws (role not in $fillable)
+
+// update(): sets ONLY the columns you pass (partial updates are supported).
+UserRepository::update("42", [
+    "name" => "Budi Santoso",
+]);
+// UPDATE users SET name=:name WHERE id=?
+
 UserRepository::update("42", [
     "name"     => "Budi Santoso",
     "email"    => "budi@mail.com",
@@ -798,9 +819,9 @@ class UserService extends Service {
 
     public function create(array $input): string {
         $data = [
-            trim($input["name"]),
-            strtolower(trim($input["email"])),
-            password_hash($input["password"], PASSWORD_DEFAULT),
+            "name"     => trim($input["name"]),
+            "email"    => strtolower(trim($input["email"])),
+            "password" => password_hash($input["password"], PASSWORD_DEFAULT),
         ];
         return UserRepository::insert($data)->lastInsertId();
     }
@@ -854,10 +875,11 @@ $router->run();
    (auth, CORS) must be done inside handlers or the front controller.
 3. **Route order matters** — first registered match wins; declare static paths
    before `:param` paths.
-4. **`insert()` is positional** — pass values in `$fillable` order.
-5. **`update()` needs every fillable column** — it binds `:name` placeholders for
-   all of `$fillable`; missing keys raise a PDO error. Keep `$fillable` narrow or
-   override `update()` for partial updates.
+4. **`insert()`/`update()` must be associative** — columns are taken from the
+   array keys; a plain list throws. Every key must be listed in `$fillable`,
+   otherwise an `ErrorException` (`Invalid column ...`) is thrown.
+5. **`update()` supports partial updates** — only the columns present in `$data`
+   are written; you do not have to pass every fillable column.
 6. **HTTP input is strings** — strict `int`/`float` rules fail on query/body
    values, and `min:N`/`max:N` measure **string length** for strings. Use
    `pattern:\d+` for numeric fields coming from the request, then cast.
