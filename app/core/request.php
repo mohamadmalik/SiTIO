@@ -22,10 +22,6 @@ class Request {
         return $this->headers[$field] ?? null;
     }
 
-    public function param(string $field): ?string {
-        return $_SERVER["URL_PARAM"][$field] ?? null;
-    }
-
     public function all(): array {
         return [...$_REQUEST, ...$_FILES];
     }
