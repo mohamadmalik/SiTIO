@@ -5,7 +5,7 @@ class Repository {
     protected static string $idColumn = "id";
     protected static array $fillable = [];
 
-    public static function findAll(): array {
+    public static function all(): array {
         $table = static::$table;
         return DB::query("SELECT * FROM $table")->fetchAll();
     }
