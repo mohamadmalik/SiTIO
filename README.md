@@ -2,8 +2,9 @@
 
 A minimal, **zero-dependency** PHP boilerplate for building small web APIs and
 web applications. It ships a tiny hand-rolled core — router, PDO wrapper,
-repository/service/controller layering, request/response helpers, validator and
-filesystem utilities — with no Composer packages, no framework, and no build step.
+repository/service/controller layering, request/response helpers, view rendering,
+validator and filesystem utilities — with no Composer packages, no framework, and
+no build step.
 
 Clone it, point it at a database, and start adding routes.
 
@@ -17,11 +18,12 @@ $router->run();
 
 ## Features
 
-- **Router** — `GET`/`POST` routes with `:param` placeholders, subdirectory-aware, automatic 404
+- **Router** — `GET`/`POST`/`PUT`/`PATCH`/`DELETE` routes with `:param` placeholders and `*` wildcards, subdirectory-aware, `_method` form override, multiple handlers per route, automatic 404
+- **Views** — `Response::render("name")` loads `app/views/name.view.php`
 - **Database** — lazy PDO singleton with `DB::query()` prepared statements and transactions
-- **Repository pattern** — static base `Repository` (`findAll`, `find`, `findOne`, `findOneById`, `insert`, `update`, `delete`) configured via `$table` / `$idColumn` / `$fillable`
+- **Repository pattern** — static base `Repository` (`all`, `find`, `findOne`, `findOneById`, `insert`, `update`, `delete`) configured via `$table` / `$idColumn` / `$fillable`
 - **Service & Controller layers** — skeletons enforcing `Controller → Service → Repository`
-- **Request / Response** — typed access to params, query, body, headers and uploads; standardized `Response::json()` and `Response::redirect()`
+- **Request / Response** — typed access to query, body, JSON body, headers and uploads; `Response::status()`, `json()`, `redirect()` and `render()`
 - **Validator** — rule/message maps for strings, numbers, emails, enums, patterns and file uploads (`image`, `pdf`, `mime:`, size/count rules)
 - **Storage** — static file helpers: `exists`, `get`, `put`, `save` (uploads), `unlink`
 - **No dependencies** — plain PHP >= 8.1, `declare(strict_types=1)` everywhere, global namespace
@@ -65,16 +67,17 @@ Full instructions: **[DOCS.md](DOCS.md)**.
     ├── controllers/          # Controllers (HTTP layer)
     ├── services/             # Services (business logic)
     ├── repositories/         # Repositories (data access)
+    ├── views/                # Views (*.view.php), rendered by Response::render()
     └── core/                 # Framework core
-        ├── database.php      # DB — PDO wrapper, DB::query, transactions
-        ├── repository.php    # Repository — static CRUD base
-        ├── service.php       # Service — base service
-        ├── controller.php    # Controller — base controller
-        ├── request.php       # Request — route params, GET/POST, headers, files
-        ├── response.php      # Response — json() / redirect()
-        ├── router.php        # Router — get(), post(), run()
-        ├── storage.php       # Storage — file helpers
-        └── validator.php     # Validator — validation rules
+        ├── Database.php      # DB — PDO wrapper, DB::query, transactions
+        ├── Repository.php    # Repository — static CRUD base
+        ├── Service.php       # Service — base service
+        ├── Controller.php    # Controller — base controller
+        ├── Request.php       # Request — GET/POST, JSON body, headers, files
+        ├── Response.php      # Response — status/json/redirect/render
+        ├── Router.php        # Router — routes, params, wildcards, run()
+        ├── Storage.php       # Storage — file helpers
+        └── Validator.php     # Validator — validation rules
 ```
 
 Architecture: **Route → Controller → Service → Repository → DB (PDO)**.
@@ -83,7 +86,7 @@ Architecture: **Route → Controller → Service → Repository → DB (PDO)**.
 
 | Document | Content |
 |---|---|
-| [DOCS.md](DOCS.md) | How to use the boilerplate: database setup, adding repositories/controllers/services, routes, `Storage::*`, `Request`, `Repository` & `DB::query`, `Validator`, standardized `Response` |
+| [DOCS.md](DOCS.md) | How to use the boilerplate: database setup, adding repositories/controllers/services, routes, `Request`, `Repository` & `DB::query`, `Validator`, standardized `Response`, views |
 | README.md | Project overview (this file) |
 
 ## License
