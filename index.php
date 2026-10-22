@@ -17,3 +17,5 @@ $router->get("/", fn() => Response::redirect(BASE_URL . "/adb"), fn() => Respons
 $router->get("/:param_1", function(Request $request, array $params) {
     Response::render("tes", ["params" => $params]);
 });
+
+$router->run();
