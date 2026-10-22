@@ -3,40 +3,118 @@
 class Router {
     protected array $routes = [];
 
-    public function get(string $path, callable $handler) {
-        if(!isset($this->routes["GET"])) $this->routes["GET"] = [];
-        $this->routes["GET"][$path] = $handler;
+    protected static function compilePattern(string $route): array {
+        $fields = [];
+
+        $routePattern = str_replace(".", "\.", $route); // replace "/" to "\/" (regex safe)
+        $routePattern = str_replace("/", "\/", $route); // replace "/" to "\/" (regex safe)
+        $routePattern = str_replace("*", ".*", $routePattern); // repalce "*" to ".*" (match all regex)
+        $routePattern = preg_replace_callback(
+            "/:(\w+)/",
+            function (array $match) use (&$fields): string {
+                $fields[] = $match[1];
+                return "([^\/]+)";
+            },
+            $routePattern
+        ); // repalce ":param" to "([^\/])" (param catch)
+
+        return [$fields, "/^$routePattern$/"]; // compile to valid pattern
     }
 
-    public function post(string $path, callable $handler) {
-        if(!isset($this->routes["POST"])) $this->routes["POST"] = [];
-        $this->routes["POST"][$path] = $handler;
+    protected static function callHandlers(array $m_handlers, array $params = []) {
+        $req = new Request();
+
+        foreach($m_handlers as $handler) {
+            if(is_callable($handler)) $handler($req, $params); // call handler
+            else if(is_array($handler)) {
+                if(count($handler) < 2) continue;
+                $className = $handler[0];
+                $action = $handler[1];
+
+                // load controller by name
+                require_once __DIR__ . "/../controllers/$className.php";
+                // init controller class and execute action
+                (new $className())->$action($req, $params);
+            }
+        }
+    }
+
+    private function add(string $method, string $route, callable|array ...$handlers) {
+        if(!isset($this->routes[$method])) $this->routes[$method] = [];
+
+        $pattern = static::compilePattern($route);
+        $this->routes[$method][] = [
+           "pattern_field" => $pattern[0],
+           "pattern" => $pattern[1],
+           "handlers" => $handlers,
+           "path" => $route
+       ];
+    }
+
+    public function get(string $route, callable|array ...$handlers) {
+        $this->add("GET", $route, ...$handlers);
+    }
+
+    public function post(string $route, callable|array ...$handlers) {
+        $this->add("POST", $route, ...$handlers);
+    }
+
+    public function put(string $route, callable|array ...$handlers) {
+        $this->add("PUT", $route, ...$handlers);
+    }
+
+    public function patch(string $route, callable|array ...$handlers) {
+        $this->add("PATCH", $route, ...$handlers);
+    }
+
+    public function delete(string $route, callable|array ...$handlers) {
+        $this->add("DELETE", $route, ...$handlers);
     }
 
     public function run() {
-        $method = $_SERVER['REQUEST_METHOD'];
-        $uri = parse_url($_SERVER['REQUEST_URI']);
-        $base = trim(dirname($_SERVER['SCRIPT_NAME']));
-        $absPath = rtrim($uri['path'], "/");
-        $path = "/" . trim(substr($absPath, strlen($base)), "/");
+        $method = $_SERVER['REQUEST_METHOD'] ?? "GET";
+
+        if($method === "POST") {
+            $overrideMethod = $_POST["_method"] ?? null;
+
+            if(in_array($overrideMethod, ["PUT", "PATCH", "DELETE"], true)) {
+                $method = $overrideMethod;
+            }
+        }
+
+        $base = str_replace("\\", "", trim(dirname($_SERVER['SCRIPT_NAME'])));
+        $path = parse_url(
+            $_SERVER['REQUEST_URI'] ?? "/",
+            PHP_URL_PATH
+        ) ?: "/";
+
+        if($method === "GET" && is_file(__DIR__ . "/../../$path")) {
+            return false;
+        }
+
+        if(strlen($base) > 1) {
+            $path = substr($path, strlen($base));
+        }
 
         define("BASE_URL", $base);
 
-        // Find match url
-        foreach($this->routes[$method] as $route => $handler) {
-            if($route == $path) return $handler(new Request());
-            $routePattern = preg_replace("/\//", "\\/", $route);
-            $routePattern = preg_replace("/:\w+/", "(.+)", $routePattern);
+        // // Find match url
+        foreach($this->routes[$method] as $route) {
+            $m_path = $route["path"];
+            $handlers = $route["handlers"];
+            $pattern = $route["pattern"];
+            if($m_path == $path) {
+                return static::callHandlers($handlers);
+            }
 
-            preg_match("/^" . $routePattern . "$/", $route, $routeMatches); // get needed cols
-            if(preg_match("/^" . $routePattern . "$/", $path, $matches)) {
-                $_SERVER["URL_PARAM"] = [];
+            if(preg_match($pattern, $path, $matches)) {
+                $params = [];
                 for($i = 1; $i < count($matches); $i++) {
-                    $field = substr($routeMatches[$i], 1);
-                    $_SERVER["URL_PARAM"][$field] = $matches[$i];
+                    $field = $route["pattern_field"][$i-1];
+                    $params[$field] = $matches[$i];
                 }
 
-                return $handler(new Request());
+                return static::callHandlers($handlers, $params);
             }
         }
 
