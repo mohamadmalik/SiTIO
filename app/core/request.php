@@ -3,11 +3,6 @@
 class Request {
     protected array $headers = [];
 
-    public function __construct() {
-        if($this->headers = getallheaders()) return;
-        else if($this->headers = apache_request_headers()) return;
-    }
-
     public function json(): array {
         $data = json_decode(file_get_contents("php://input"), true);
         if(json_last_error() == JSON_ERROR_NONE) {
@@ -17,6 +12,13 @@ class Request {
     }
 
     public function header(string $field): ?string {
+        // initial header extraction
+        if(count($this->headers) < 1) {
+            // do nothing when success/false
+            if($this->headers = getallheaders()) {
+            } else if($this->headers = apache_request_headers()) {
+            }
+        }
         return $this->headers[$field] ?? null;
     }
 
