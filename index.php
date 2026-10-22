@@ -11,10 +11,9 @@ require_once __DIR__ . "/app/core/response.php";
 require_once __DIR__ . "/app/core/router.php";
 
 $router = new Router();
-$router->get("/", function() {
-    var_dump("Home");
+
+$router->get("/", fn() => Response::redirect(BASE_URL . "/adb"), fn() => Response::render("tes"));
+
+$router->get("/:param_1", function(Request $request, array $params) {
+    Response::render("tes", ["params" => $params]);
 });
-$router->get("/:abc", function(Request $request) {
-    var_dump($request->param("abc"));
-});
-$router->run();
