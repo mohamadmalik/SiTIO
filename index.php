@@ -1,14 +1,14 @@
 <?php declare(strict_types=1);
 
-require_once __DIR__ . "/app/core/database.php";
-require_once __DIR__ . "/app/core/storage.php";
-require_once __DIR__ . "/app/core/validator.php";
-require_once __DIR__ . "/app/core/repository.php";
-require_once __DIR__ . "/app/core/service.php";
-require_once __DIR__ . "/app/core/controller.php";
-require_once __DIR__ . "/app/core/request.php";
-require_once __DIR__ . "/app/core/response.php";
-require_once __DIR__ . "/app/core/router.php";
+require_once __DIR__ . "/app/core/Database.php";
+require_once __DIR__ . "/app/core/Storage.php";
+require_once __DIR__ . "/app/core/Validator.php";
+require_once __DIR__ . "/app/core/Repository.php";
+require_once __DIR__ . "/app/core/Service.php";
+require_once __DIR__ . "/app/core/Controller.php";
+require_once __DIR__ . "/app/core/Request.php";
+require_once __DIR__ . "/app/core/Response.php";
+require_once __DIR__ . "/app/core/Router.php";
 
 $router = new Router();
 
