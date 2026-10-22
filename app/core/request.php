@@ -8,12 +8,20 @@ class Request {
         else if($this->headers = apache_request_headers()) return;
     }
 
+    public function json(): array {
+        $data = json_decode(file_get_contents("php://input"), true);
+        if(json_last_error() == JSON_ERROR_NONE) {
+            return (array) $data;
+        }
+        return [];
+    }
+
     public function header(string $field): ?string {
-        return $this->headers[$field];
+        return $this->headers[$field] ?? null;
     }
 
     public function param(string $field): ?string {
-        return $_SERVER["URL_PARAM"][$field];
+        return $_SERVER["URL_PARAM"][$field] ?? null;
     }
 
     public function all(): array {
@@ -21,11 +29,11 @@ class Request {
     }
 
     public function get(string $field): mixed {
-        return $_GET[$field];
+        return $_GET[$field] ?? null;
     }
 
     public function post(string $field): mixed {
-        return $_POST[$field];
+        return $_POST[$field] ?? null;
     }
 
     public function file(string $field): array {

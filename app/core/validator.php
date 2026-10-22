@@ -142,8 +142,8 @@ class Validator {
             $is_file = strlen($field) > 5 && preg_match("/^file:(.+)$/", $field, $file_field_match);
             $validationResult = self::validate(
                 $is_file
-                    ? ($_FILES[$file_field_match[1]] ?: null)
-                    : ($_REQUEST[$field] ?: null)
+                    ? ($_FILES[$file_field_match[1]] ?? null)
+                    : ($_REQUEST[$field] ?? null)
                 , $rules
             );
 

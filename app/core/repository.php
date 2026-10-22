@@ -25,11 +25,10 @@ class Repository {
             array_keys($data)
         );
         $whereClause = implode(" AND ", $m_whereClause);
-
-        $m_data = array_map(
-            fn ($val) => !is_array($val) ? $val : $val[1],
-            array_values($data)
-        );
+        $m_data = [];
+        foreach($data as $k => $val) {
+            $m_data[$k] = !is_array($val) ? $val : $val[1];
+        }
 
         return DB::query("SELECT * FROM $table WHERE $whereClause", $m_data)->fetchAll();
     }
@@ -56,8 +55,8 @@ class Repository {
         $cols = implode(", ", $keys);
         $params = implode(", ",
             array_map(
-                fn () => "?",
-                static::$fillable
+                fn ($k) => ":$k",
+                $keys
             )
         );
 
@@ -80,7 +79,7 @@ class Repository {
             )
         );
 
-        return DB::query("UPDATE $table SET $cols WHERE $idColumn=?", [...$data, $id]);
+        return DB::query("UPDATE $table SET $cols WHERE $idColumn=:$idColumn", [...$data, $idColumn => $id]);
     }
 
     public static function delete(string $id): PDOStatement {
