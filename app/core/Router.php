@@ -82,7 +82,8 @@ class Router {
             }
         }
 
-        $base = str_replace("\\", "", trim(dirname($_SERVER['SCRIPT_NAME'])));
+        $base = str_replace('\\', '', trim(dirname($_SERVER['SCRIPT_NAME'])));
+        $base = preg_replace('#/public$#', '', $base);
         $path = parse_url(
             $_SERVER['REQUEST_URI'] ?? "/",
             PHP_URL_PATH
