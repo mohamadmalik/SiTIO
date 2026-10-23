@@ -7,7 +7,7 @@
 		"concurrently": "^10.0.6"
 	},
 	"scripts": {
-	"dev": "concurrently \"tailwindcss -i public/src/tailwind.css -o public/dist/style.css --watch\" \"php -S localhost:5000 -t public\"",
-	"build:css": "tailwindcss -i public/src/tailwind.css -o public/dist/style.css"
+		"dev": "concurrently \"tailwindcss -i public/src/tailwind.css -o public/dist/style.css --watch\" \"php -S localhost:5000 -t public\"",
+		"build:css": "tailwindcss -i public/src/tailwind.css -o public/dist/style.css"
 	}
 }
