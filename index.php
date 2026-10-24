@@ -14,13 +14,13 @@ $router = new Router();
 
 // Render view 'klasemen' (otomatis memanggil app/views/klasemen.view.php)
 $router->get("/", function() {
-    Response::render("klasemen");
+    Response::render("Dashboard.index");
 });
 
 $router->get("/sample", ["SampleController", "test"]);
 
 $router->get("/:param_1", function(Request $request, array $params) {
-    Response::render("klasemen", ["params" => $params]);
+    Response::render("Dashboard.index", ["params" => $params]);
 });
 
 $router->run();
