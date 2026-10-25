@@ -23,6 +23,10 @@
                 <?php require __DIR__ . '/klasemen.view.php'; ?>
             </div>
 
+            <div>
+                <?php require __DIR__ . '/daftar-pdln.php'; ?>
+            </div>
+
         </div>
     </div>
 
