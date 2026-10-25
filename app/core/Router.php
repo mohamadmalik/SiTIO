@@ -97,7 +97,13 @@ class Router {
             $path = substr($path, strlen($base));
         }
 
-        define("BASE_URL", $base);
+        if (empty($path)) {
+            $path = '/';
+        }
+
+        if (!defined('BASE_URL')) {
+            define('BASE_URL', $base);
+        }
 
         // // Find match url
         foreach($this->routes[$method] as $route) {
