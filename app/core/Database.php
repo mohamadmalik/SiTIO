@@ -18,7 +18,12 @@ class DB {
             $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
             self::$pdo = $pdo;
         } catch(PDOException $e) {
-            die($e->getMessage());
+            Log::error("PDO connection failed.", [
+                "error_code" => $e->getCode(),
+                "error_message" => $e->getMessage()
+            ]);
+            http_response_code(502);
+            die();
         }
     }
 
