@@ -13,14 +13,7 @@ require_once __DIR__ . "/app/core/Response.php";
 require_once __DIR__ . "/app/core/Router.php";
 
 Env::load(__DIR__ . "/.env");
+
 $router = new Router();
-
-$router->get("/", fn() => Response::redirect(BASE_URL . "/adb"), fn() => Response::render("tes"));
-
-$router->get("/sample", ["SampleController", "test"]);
-
-$router->get("/:param_1", function(Request $request, array $params) {
-    Response::render("tes", ["params" => $params]);
-});
-
+require_once __DIR__ . "/routes.php";
 $router->run();
