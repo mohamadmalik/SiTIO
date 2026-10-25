@@ -4,12 +4,12 @@ class DB {
     protected static ?PDO $pdo = null;
 
     protected static function init() {
-        $driver = getenv("DB_DRIVER") ?: "mysql";
-        $host = getenv("DB_HOST") ?: "localhost";
-        $port = getenv("DB_PORT") ?: "3306";
-        $dbname = getenv("DB_NAME") ?: "PBL_TI_2025_B_NavetaCandra";
-        $user = getenv("DB_USER") ?: "root";
-        $pass = getenv("DB_PASS") ?: "root";
+        $driver = $_ENV["DB_DRIVER"];
+        $host = $_ENV["DB_HOST"];
+        $port = $_ENV["DB_PORT"];
+        $dbname = $_ENV["DB_NAME"];
+        $user = $_ENV["DB_USER"];
+        $pass = $_ENV["DB_PASS"];
 
         $dsn = "$driver:host=$host;port=$port;dbname=$dbname";
         try {
