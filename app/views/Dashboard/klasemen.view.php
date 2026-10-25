@@ -1,7 +1,7 @@
 
 
  
-        <div class="w-full max-w-sm ml-auto bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+        <div class="w-full max-w-sm ml-auto bg-white rounded-3xl p-6 shadow-sm border border-slate-100 py-10.5">
             
             <!-- Header -->
             <div class="flex justify-between items-center mb-6">
@@ -18,7 +18,7 @@
         1
     </div>
     <div class="w-full">
-        <h3 class="text-base font-semibold text-[#008C95]">Indonesia</h3>
+        <h3 class="text-base font-semibold text-[#008C95]">Singapura</h3>
         
         <!-- Progress bar dengan teks persen di kanan -->
         <div class="flex items-center gap-3">
@@ -50,7 +50,7 @@
                 <!-- Peringkat 3 -->
                 <div class="flex items-center gap-4">
                     <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-[#EEF7F8] rounded-lg text-2xl text-[#008C95]">
-                        2
+                        3
                     </div>
                     <div class="w-full">
                     <h3 class="text-base font-semibold text-[#008C95]">Kamboja</h3>
@@ -68,7 +68,7 @@
                 <!-- Peringkat 4 -->
                 <div class="flex items-center gap-4">
                     <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-[#EEF7F8] rounded-lg text-2xl text-[#008C95]">
-                        2
+                        4
                     </div>
                     <div class="w-full">
                     <h3 class="text-base font-semibold text-[#008C95]">Kanada</h3>
@@ -79,6 +79,23 @@
                             <div class="bg-[#008C95] h-1.75 rounded-full" style="width: 25%"></div>
                         </div>
                         <span class="text-sm font-semibold text-gray-700">2</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-[#EEF7F8] rounded-lg text-2xl text-[#008C95]">
+                        5
+                    </div>
+                    <div class="w-full">
+                    <h3 class="text-base font-semibold text-[#008C95]">Korea</h3>
+                    
+                    <!-- Progress bar dengan teks persen di kanan -->
+                    <div class="flex items-center gap-3">
+                        <div class="w-full bg-gray-200 rounded-full h-1.75">
+                            <div class="bg-[#008C95] h-1.75 rounded-full" style="width: 50%"></div>
+                        </div>
+                        <span class="text-sm font-semibold text-gray-700">1</span>
                     </div>
                 </div>
             </div>

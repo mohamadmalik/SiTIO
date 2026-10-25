@@ -27,6 +27,40 @@ $renderPdln = function (Request $request, array $params) {
     Response::render("Dashboard.index", ["page" => "pdln"]);
 };
 
+
+$renderOutbound = function (Request $request, array $params) {
+    if (session_status() === PHP_SESSION_NONE && !session_start()) {
+        throw new RuntimeException("Gagal memulai sesi untuk halaman Outbound.");
+    }
+
+    Response::render("Dashboard.index", ["page" => "outbound"]);
+};
+
+$renderInbound = function (Request $request, array $params) {
+    if (session_status() === PHP_SESSION_NONE && !session_start()) {
+        throw new RuntimeException("Gagal memulai sesi untuk halaman Inbound.");
+    }
+
+    Response::render("Dashboard.index", ["page" => "inbound"]);
+};
+
+$renderTiket = function (Request $request, array $params) {
+    if (session_status() === PHP_SESSION_NONE && !session_start()) {
+        throw new RuntimeException("Gagal memulai sesi untuk halaman Tiket.");
+    }
+
+    Response::render("Dashboard.index", ["page" => "tiket"]);
+};
+
+$router->get("/daftar-outbound", $renderOutbound);
+$router->post("/daftar-outbound", $renderOutbound);
+
+$router->get("/daftar-inbound", $renderInbound);
+$router->post("/daftar-inbound", $renderInbound);
+
+$router->get("/daftar-tiket", $renderTiket);
+$router->post("/daftar-tiket", $renderTiket);
+
 $router->get("/daftar-pdln", $renderPdln);
 $router->post("/daftar-pdln", $renderPdln);
 $router->get("/daftar-pdln.php", $renderPdln);

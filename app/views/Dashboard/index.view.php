@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= ($page ?? "dashboard") === "pdln" ? "Daftar PDLN" : "Dashboard" ?></title>
+    <title><?= ["pdln" => "Daftar PDLN", "outbound" => "Daftar Outbound", "inbound" => "Daftar Inbound", "tiket" => "Daftar Tiket"][$page ?? "dashboard"] ?? "Dashboard" ?></title>
     <link rel="stylesheet" href="<?= (defined("BASE_URL") ? BASE_URL : "") ?>/dist/style.css">
 </head>
-<body class="min-h-screen bg-gradient-to-br from-[#D6E3D5] via-[#ADCED3] to-[#D9E7E8] bg-fixed font-sans text-slate-800">
+<body class="min-h-screen bg-gradient-to-br from-[#d2e1cc] via-[#9ec2be] to-[#D9E7E8] bg-fixed font-sans text-slate-800">
 
     <!-- Tombol Toggle Mobile -->
     <button data-drawer-target="separator-sidebar" data-drawer-toggle="separator-sidebar" aria-controls="separator-sidebar" type="button" class="ms-3 mt-3 inline-flex sm:hidden p-2 text-sm text-slate-600 rounded-lg hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-slate-200">
@@ -65,20 +65,41 @@
                 <div>
                     <?php require __DIR__ . "/../daftar-pdln.view.php"; ?>
                 </div>
+                        <?php elseif (($page ?? "dashboard") === "outbound"): ?>
+                <h1 class="text-2xl font-bold mb-6">Daftar Outbound</h1>
+                <div>
+                    <?php require __DIR__ . "/../daftar-outbound.view.php"; ?>
+                </div>
+            <?php elseif (($page ?? "dashboard") === "inbound"): ?>
+                <h1 class="text-2xl font-bold mb-6">Daftar Inbound</h1>
+                <div>
+                    <?php require __DIR__ . "/../daftar-inbound.view.php"; ?>
+                </div>
+            <?php elseif (($page ?? "dashboard") === "tiket"): ?>
+                <h1 class="text-2xl font-bold mb-6">Daftar Tiket</h1>
+                <div>
+                    <?php require __DIR__ . "/../daftar-tiket.view.php"; ?>
+                </div>
             <?php else: ?>
                 <h1 class="text-2xl font-bold mb-6">Dashboard</h1>
 
                 <!-- Container Grid / Flex untuk menampung komponen -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                    <!-- Komponen Status -->
-                    <div>
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4 items-start">
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:col-span-2">
+                        <?php require __DIR__ . "/pdln-status.php"; ?>
+                        <?php require __DIR__ . "/outbound-status.php"; ?>
+                        <?php require __DIR__ . "/inbound-status.php"; ?>
+                        <?php require __DIR__ . "/tiket-status.php"; ?>
+                    </div>
+
+                    <div class="xl:row-span-2">
                         <?php require __DIR__ . "/status.view.php"; ?>
                     </div>
 
-                    <!-- Komponen Klasemen -->
-                    <div>
+                    <div class="xl:row-span-2">
                         <?php require __DIR__ . "/klasemen.view.php"; ?>
                     </div>
+                    
                 </div>
             <?php endif; ?>
         </div>
@@ -87,7 +108,7 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <?php if (($page ?? "dashboard") !== "pdln"): ?>
+    <?php if (($page ?? "dashboard") === "dashboard"): ?>
     <script>
         let selected = null;
         const refresh = () => {
@@ -106,50 +127,78 @@
         };
 
         const chart = new ApexCharts(document.getElementById("donut-chart"), {
-            chart: {
-                type: "donut",
-                height: 220,
-                fontFamily: "Inter, sans-serif",
-                events: {
-                    dataPointSelection: (e, ctx, cfg) => {
-                        selected = selected === cfg.dataPointIndex ? null : cfg.dataPointIndex;
-                        setTimeout(refresh, 0);
-                    },
-                    dataPointMouseLeave: () => setTimeout(refresh, 0)
-                }
+    chart: {
+        type: "donut",
+        height: 326,
+        fontFamily: "Inter, sans-serif",
+        events: {
+            dataPointSelection: (e, ctx, cfg) => {
+                selected = selected === cfg.dataPointIndex ? null : cfg.dataPointIndex;
+                setTimeout(refresh, 0);
             },
-            series: [40, 10, 60, 10],
-            labels: ["Dosen", "Tendik", "Mahasiswa", "Struktural"],
-            colors: ["#008C95", "#F5B52E", "#D9361E", "#16A34A"],
-            stroke: { width: 0 },
-            dataLabels: { enabled: false },
-            legend: {
-                position: "bottom",
-                fontSize: "14px",
-                markers: { size: 6, offsetX: -2 },
-                itemMargin: { horizontal: 10, vertical: 4 }
-            },
-            plotOptions: {
-                pie: {
-                    donut: {
-                        size: "78%",
-                        labels: {
-                            show: true,
-                            name: { offsetY: 20, color: "#64748b", fontSize: "14px" },
-                            value: { offsetY: -20, color: "#1e293b", fontSize: "28px", fontWeight: 700 },
-                            total: {
-                                show: true,
-                                label: "Total pengguna",
-                                fontSize: "12px",
-                                color: "#64748b",
-                                formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
-                            }
-                        }
+            dataPointMouseLeave: () => setTimeout(refresh, 0)
+        }
+    },
+    series: [40, 10, 60, 10],
+    labels: ["Dosen", "Tendik", "Mahasiswa", "Struktural"],
+    colors: ["#4aa8f8", "#8584e8", "#f4a340", "#FF6467"],
+    stroke: { width: 2, colors: ["#fff"] },
+    dataLabels: {
+    enabled: true,
+    style: { fontSize: "12px", fontWeight: 600, colors: ["#fff"] },
+    formatter: (val, opts) => opts.w.globals.series[opts.seriesIndex],
+    dropShadow: { enabled: false }
+},
+    legend: {
+        position: "bottom",
+        fontSize: "13px",
+        markers: { size: 6, offsetX: -2 },
+        itemMargin: { horizontal: 8, vertical: 4 }
+    },
+    plotOptions: {
+        pie: {
+            donut: {
+                size: "55%",
+                labels: {
+                    show: true,
+                    name: { offsetY: 20, color: "#64748b", fontSize: "13px" },
+                    value: { offsetY: -20, color: "#1e293b", fontSize: "26px", fontWeight: 700 },
+                    total: {
+                        show: true,
+                        label: "Total pengguna",
+                        fontSize: "12px",
+                        color: "#64748b",
+                        formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
                     }
                 }
             }
+        }
+    }
+});
+chart.render();
+const dataset = {
+    "7d":  [8, 2, 15, 3],
+    "1m":  [40, 10, 60, 10],
+    "1y":  [120, 30, 340, 40],
+    "ytd": [95, 25, 280, 30],
+};
+const activeCls = ["bg-slate-800", "text-white"];
+const idleCls   = ["bg-slate-100", "text-slate-600", "hover:bg-slate-200"];
+
+document.querySelectorAll(".range-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.querySelectorAll(".range-btn").forEach(b => {
+            b.classList.remove(...activeCls);
+            b.classList.add(...idleCls);
         });
-        chart.render();
+        btn.classList.remove(...idleCls);
+        btn.classList.add(...activeCls);
+
+        selected = null;
+        chart.updateSeries(dataset[btn.dataset.range]);
+        setTimeout(refresh, 0);
+    });
+});
     </script>
     <?php endif; ?>
 </body>
