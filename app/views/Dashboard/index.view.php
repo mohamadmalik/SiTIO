@@ -173,6 +173,7 @@
                 }
             }
         }
+<<<<<<< HEAD
     }
 });
 chart.render();
@@ -201,5 +202,11 @@ document.querySelectorAll(".range-btn").forEach(btn => {
 });
     </script>
     <?php endif; ?>
+=======
+    });
+    chart.render();
+</script>
+</body>
+>>>>>>> master
 </body>
 </html>
