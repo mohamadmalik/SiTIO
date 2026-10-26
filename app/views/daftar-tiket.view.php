@@ -184,8 +184,8 @@ $tiket = $_SESSION['tiket'];
 
 <script>
   (function () {
-    const modal = document.getElementById("modal-tiket");
-
+        const modal = document.getElementById("modal-tiket"); // sesuaikan id per halaman
+document.body.appendChild(modal);
     const toggle = (show) => {
       modal.classList.toggle("hidden", !show);
       modal.classList.toggle("flex", show);

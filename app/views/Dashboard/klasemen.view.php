@@ -93,7 +93,7 @@
                     <!-- Progress bar dengan teks persen di kanan -->
                     <div class="flex items-center gap-3">
                         <div class="w-full bg-gray-200 rounded-full h-1.75">
-                            <div class="bg-[#008C95] h-1.75 rounded-full" style="width: 50%"></div>
+                            <div class="bg-[#008C95] h-1.75 rounded-full" style="width: 12.5%"></div>
                         </div>
                         <span class="text-sm font-semibold text-gray-700">1</span>
                     </div>

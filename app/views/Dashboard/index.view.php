@@ -6,7 +6,7 @@
     <title><?= ["pdln" => "Daftar PDLN", "outbound" => "Daftar Outbound", "inbound" => "Daftar Inbound", "tiket" => "Daftar Tiket"][$page ?? "dashboard"] ?? "Dashboard" ?></title>
     <link rel="stylesheet" href="<?= (defined("BASE_URL") ? BASE_URL : "") ?>/dist/style.css">
 </head>
-<body class="min-h-screen bg-gradient-to-br from-[#d2e1cc] via-[#9ec2be] to-[#D9E7E8] bg-fixed font-sans text-slate-800">
+<body class="min-h-screen bg-gradient-to-br  from-[#d1ddc1] via-[#9ec2be] to-[#D9E7E8] bg-fixed font-sans text-slate-800">
 
     <!-- Tombol Toggle Mobile -->
     <button data-drawer-target="separator-sidebar" data-drawer-toggle="separator-sidebar" aria-controls="separator-sidebar" type="button" class="ms-3 mt-3 inline-flex sm:hidden p-2 text-sm text-slate-600 rounded-lg hover:bg-slate-100 focus:outline-none focus:ring-4 focus:ring-slate-200">
@@ -39,7 +39,7 @@
                 $isActive = ($activePage === $item["key"]);
             ?>
             <li>
-                <a href="<?= $item["href"] ?>" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <?= $isActive ? "bg-indigo-500 text-white shadow-md shadow-indigo-300/50" : "text-slate-700 hover:bg-white/70" ?>">
+                <a href="<?= $item["href"] ?>" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <?= $isActive ? "bg-[#008C95] text-white shadow-md shadow-indigo-300/50" : "text-slate-700 hover:bg-white/70" ?>">
                     <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="<?= $item["icon"] ?>"/></svg>
                     <span class="flex-1"><?= $item["label"] ?></span>
                     <?php if ($isActive): ?>
@@ -59,7 +59,7 @@
 
     <!-- Konten Utama (Berada di sebelah kanan sidebar) -->
     <div class="p-3 sm:ml-64 sm:p-4">
-        <div class="max-w-8xl mx-auto min-h-[calc(100vh-1.5rem)] rounded-[2rem] bg-white/80 backdrop-blur shadow-sm px-6 py-6">
+        <div class="rounded-b-lg max-w-8xl mx-auto h-300 rounded-[2rem] bg-white/80 backdrop-blur shadow-sm px-6 py-6 ">
             <?php if (($page ?? "dashboard") === "pdln"): ?>
                 <h1 class="text-2xl font-bold mb-6">Daftar PDLN</h1>
                 <div>

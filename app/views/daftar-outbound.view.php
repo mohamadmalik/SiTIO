@@ -208,7 +208,8 @@ $outbound = $_SESSION['outbound'];
 
 <script>
   (function () {
-    const modal = document.getElementById("modal-outbound");
+        const modal = document.getElementById("modal-outbound"); // sesuaikan id per halaman
+document.body.appendChild(modal);
     const uploadUrl = <?= json_encode($uploadUrl) ?>;
 
     const toggle = (show) => {

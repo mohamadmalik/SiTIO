@@ -208,7 +208,8 @@ $inbound = $_SESSION['inbound'];
 
 <script>
   (function () {
-    const modal = document.getElementById("modal-inbound");
+        const modal = document.getElementById("modal-inbound"); // sesuaikan id per halaman
+document.body.appendChild(modal);
     const uploadUrl = <?= json_encode($uploadUrl) ?>;
 
     const toggle = (show) => {

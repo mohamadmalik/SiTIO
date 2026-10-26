@@ -159,7 +159,7 @@ $pengajuan = $_SESSION['pengajuan'];
 
 <!-- Modal: Upload SP Setneg + Update Status -->
 <div id="modal-spsetneg" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/20 rounded-4xl p-4">
-  <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-6">
+  <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-6 ">
     <div class="flex items-start justify-between mb-4">
       <div>
         <h3 class="text-lg font-semibold text-slate-800">Detail Pengajuan</h3>
@@ -204,7 +204,8 @@ $pengajuan = $_SESSION['pengajuan'];
 
 <script>
   (function () {
-    const modal = document.getElementById("modal-spsetneg");
+    const modal = document.getElementById("modal-spsetneg"); // sesuaikan id per halaman
+document.body.appendChild(modal);
     const uploadUrl = <?= json_encode($uploadUrl) ?>;
 
     const toggle = (show) => {
