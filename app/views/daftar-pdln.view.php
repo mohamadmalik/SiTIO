@@ -1,87 +1,122 @@
 <?php
 
 /* ---------- Konfigurasi ---------- */
-$uploadDir  = __DIR__ . '/../../public/uploads/sp_setneg/'; // sesuaikan dengan struktur proyekmu
-$uploadUrl  = '/uploads/sp_setneg/';
-$maxSize    = 5 * 1024 * 1024; // 5 MB
-$statusList = ['Diproses', 'Disetujui', 'Ditolak'];
-$badge = [
-    'Baru Diajukan' => 'bg-sky-100 text-sky-700',
-    'Diproses'      => 'bg-amber-100 text-amber-700',
-    'Disetujui'     => 'bg-green-100 text-green-700',
-    'Ditolak'       => 'bg-red-100 text-red-700',
-];
-$e = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+$uploadDir  = __DIR__ . '/../../public/uploads/pdln_docs/';
+$uploadUrl  = '/uploads/pdln_docs/';
+$maxSize    = 10 * 1024 * 1024; // 10 MB
 
-/* ---------- Data dummy ---------- */
-if (!isset($_SESSION['pengajuan'])) {
-    $_SESSION['pengajuan'] = [
-        ['id' => 101, 'kegiatan' => 'Enthufest',          'peserta' => 'Ahmad Zulfikar',     'jabatan' => 'Mahasiswa',  'tanggal' => '2026-04-09', 'status' => 'Baru Diajukan', 'sp_setneg' => null],
-        ['id' => 102, 'kegiatan' => 'Hackathon',          'peserta' => 'Dr. Siti Nurhaliza', 'jabatan' => 'Dosen',      'tanggal' => '2026-05-02', 'status' => 'Disetujui',     'sp_setneg' => null],
-        ['id' => 103, 'kegiatan' => 'Campfest',           'peserta' => 'Budi Santoso',       'jabatan' => 'Tendik',     'tanggal' => '2026-05-20', 'status' => 'Diproses',      'sp_setneg' => null],
-        ['id' => 104, 'kegiatan' => 'Techno Expo',        'peserta' => 'Rina Marlina',       'jabatan' => 'Mahasiswa',  'tanggal' => '2026-06-03', 'status' => 'Ditolak',       'sp_setneg' => null],
-        ['id' => 105, 'kegiatan' => 'Seminar Nasional',   'peserta' => 'Prof. Hendra Wijaya', 'jabatan' => 'Struktural', 'tanggal' => '2026-06-17', 'status' => 'Baru Diajukan', 'sp_setneg' => null],
-        ['id' => 106, 'kegiatan' => 'Robotics Challenge', 'peserta' => 'Dimas Prasetyo',     'jabatan' => 'Mahasiswa',  'tanggal' => '2026-06-28', 'status' => 'Disetujui',     'sp_setneg' => null],
-    ];
-}
+$e = fn($v) => htmlspecialchars((string)($v ?? ''), ENT_QUOTES, 'UTF-8');
+
 $_SESSION['csrf'] = $_SESSION['csrf'] ?? bin2hex(random_bytes(16));
 
-/* ---------- Handler POST ---------- */
+/* ---------- Handler POST: Pengajuan PDLN Baru ---------- */
 $flash = $_SESSION['flash'] ?? null;
 unset($_SESSION['flash']);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_status') {
-    $error  = null;
-    $id     = (int)($_POST['pengajuan_id'] ?? 0);
-    $status = (string)($_POST['status'] ?? '');
-    $idx    = array_search($id, array_column($_SESSION['pengajuan'], 'id'), true);
-
-    $sessionCsrf = $_SESSION['csrf'] ?? '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submit_pdln') {
+    $sessionCsrf   = $_SESSION['csrf'] ?? '';
     $submittedCsrf = (string)($_POST['csrf'] ?? '');
 
     if (!is_string($sessionCsrf) || !hash_equals($sessionCsrf, $submittedCsrf)) {
-        $error = 'Sesi tidak valid, silakan muat ulang halaman.';
-    } elseif ($idx === false) {
-        $error = 'Data pengajuan tidak ditemukan.';
-    } elseif (!in_array($status, $statusList, true)) {
-        $error = 'Status tidak valid.';
-    }
+        $_SESSION['flash'] = ['type' => 'error', 'msg' => 'Sesi tidak valid, silakan muat ulang halaman.'];
+    } else {
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
 
-    // Upload SP Setneg (opsional kalau sudah pernah diupload)
-    $file = $_FILES['sp_setneg'] ?? null;
-    if (!$error && $file && $file['error'] !== UPLOAD_ERR_NO_FILE) {
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            $error = 'Upload gagal, coba lagi.';
-        } elseif ($file['size'] > $maxSize) {
-            $error = 'Ukuran file maksimal 5 MB.';
-        } elseif ((new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']) !== 'application/pdf') {
-            $error = 'File harus berformat PDF.';
-        } else {
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
-            $name = 'sp_' . $id . '_' . bin2hex(random_bytes(6)) . '.pdf';
-            if (move_uploaded_file($file['tmp_name'], $uploadDir . $name)) {
-                $_SESSION['pengajuan'][$idx]['sp_setneg'] = $name;
-            } else {
-                $error = 'File gagal disimpan di server.';
+        // 1. Data Kegiatan
+        $emailPengaju   = trim((string)($_POST['email_pengaju'] ?? ''));
+        $jenisKegiatan  = trim((string)($_POST['jenis_kegiatan'] ?? ''));
+        $namaKegiatan   = trim((string)($_POST['nama_kegiatan'] ?? ''));
+        $tanggalMulai   = trim((string)($_POST['tanggal_mulai'] ?? ''));
+        $tanggalSelesai = trim((string)($_POST['tanggal_selesai'] ?? ''));
+        $institusi      = trim((string)($_POST['institusi_tujuan'] ?? ''));
+        $tempat         = trim((string)($_POST['tempat_kegiatan'] ?? ''));
+        $rencana        = trim((string)($_POST['rencana_tindak_lanjut'] ?? ''));
+
+        // 2. Upload Dokumen PDLN
+        $docKeys = ['tor', 'memo', 'surat_tugas', 'undangan', 'jadwal', 'setneg', 'relevansi', 'pembiayaan', 'draft_mou', 'brosur', 'bukti_registrasi', 'clearance_letter'];
+        $uploadedDocs = [];
+        foreach ($docKeys as $dk) {
+            $inputName = 'doc_' . $dk;
+            if (isset($_FILES[$inputName]) && $_FILES[$inputName]['error'] === UPLOAD_ERR_OK) {
+                $f = $_FILES[$inputName];
+                $safeName = $dk . '_' . time() . '_' . preg_replace('/[^a-zA-Z0-9_\.-]/', '_', $f['name']);
+                if (move_uploaded_file($f['tmp_name'], $uploadDir . $safeName)) {
+                    $uploadedDocs[$dk] = $safeName;
+                }
             }
         }
+
+        // 3. Data Peserta Kegiatan
+        $pesertaPost = $_POST['peserta'] ?? [];
+        $pesertaFiles = $_FILES['peserta'] ?? null;
+        $pesertaList = [];
+
+        foreach ($pesertaPost as $pIdx => $p) {
+            $ktpFile = null;
+            $pasporFile = null;
+
+            if ($pesertaFiles && isset($pesertaFiles['name'][$pIdx]['ktp']) && $pesertaFiles['error'][$pIdx]['ktp'] === UPLOAD_ERR_OK) {
+                $fName = 'ktp_' . $pIdx . '_' . time() . '_' . preg_replace('/[^a-zA-Z0-9_\.-]/', '_', $pesertaFiles['name'][$pIdx]['ktp']);
+                if (move_uploaded_file($pesertaFiles['tmp_name'][$pIdx]['ktp'], $uploadDir . $fName)) {
+                    $ktpFile = $fName;
+                }
+            }
+            if ($pesertaFiles && isset($pesertaFiles['name'][$pIdx]['paspor']) && $pesertaFiles['error'][$pIdx]['paspor'] === UPLOAD_ERR_OK) {
+                $fName = 'paspor_' . $pIdx . '_' . time() . '_' . preg_replace('/[^a-zA-Z0-9_\.-]/', '_', $pesertaFiles['name'][$pIdx]['paspor']);
+                if (move_uploaded_file($pesertaFiles['tmp_name'][$pIdx]['paspor'], $uploadDir . $fName)) {
+                    $pasporFile = $fName;
+                }
+            }
+
+            $pesertaList[] = [
+                'nama'          => (string)($p['nama'] ?? ''),
+                'nip'           => (string)($p['nip'] ?? ''),
+                'nik'           => (string)($p['nik'] ?? ''),
+                'paspor'        => (string)($p['paspor'] ?? ''),
+                'jenis_jabatan' => (string)($p['jenis_jabatan'] ?? ''),
+                'nama_jabatan'  => (string)($p['nama_jabatan'] ?? ''),
+                'email'         => (string)($p['email'] ?? ''),
+                'telepon'       => (string)($p['telepon'] ?? ''),
+                'ktp_file'      => $ktpFile,
+                'paspor_file'   => $pasporFile,
+            ];
+        }
+
+        if (!isset($_SESSION['pengajuan'])) {
+            $_SESSION['pengajuan'] = [];
+        }
+
+        $newId = count($_SESSION['pengajuan']) > 0 ? max(array_column($_SESSION['pengajuan'], 'id')) + 1 : 101;
+        $primaryPeserta = $pesertaList[0]['nama'] ?? 'Peserta PDLN';
+        $primaryJabatan = $pesertaList[0]['jenis_jabatan'] ?? 'Peserta';
+
+        $_SESSION['pengajuan'][] = [
+            'id'                    => $newId,
+            'kegiatan'              => $namaKegiatan,
+            'peserta'               => $primaryPeserta,
+            'jabatan'               => $primaryJabatan,
+            'tanggal'               => $tanggalMulai ?: date('Y-m-d'),
+            'status'                => 'Baru Diajukan',
+            'email_pengaju'         => $emailPengaju,
+            'jenis_kegiatan'        => $jenisKegiatan,
+            'tanggal_mulai'         => $tanggalMulai,
+            'tanggal_selesai'       => $tanggalSelesai,
+            'institusi_tujuan'      => $institusi,
+            'tempat_kegiatan'       => $tempat,
+            'rencana_tindak_lanjut' => $rencana,
+            'peserta_list'          => $pesertaList,
+            'dokumen'               => $uploadedDocs,
+            'created_at'            => date('Y-m-d H:i:s')
+        ];
+
+        $_SESSION['flash'] = [
+            'type' => 'success',
+            'msg'  => "Formulir Ajuan PDLN \"{$namaKegiatan}\" berhasil dikirim!"
+        ];
     }
 
-    // Aturan: untuk "Disetujui", SP Setneg wajib ada
-    if (!$error && $status === 'Disetujui' && empty($_SESSION['pengajuan'][$idx]['sp_setneg'])) {
-        $error = 'Upload SP Setneg dulu sebelum menyetujui pengajuan.';
-    }
-
-    if (!$error) {
-        $_SESSION['pengajuan'][$idx]['status'] = $status;
-        $_SESSION['flash'] = ['type' => 'success', 'msg' => "Pengajuan #{$id} diperbarui menjadi {$status}."];
-    } else {
-        $_SESSION['flash'] = ['type' => 'error', 'msg' => $error];
-    }
-
-    // Post-Redirect-Get (hanya jalan kalau belum ada output; kalau di-include sebagai partial, pindahkan handler ini ke atas index.view.php)
     if (!headers_sent()) {
         header('Location: ' . $_SERVER['REQUEST_URI']);
         exit;
@@ -89,156 +124,454 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     $flash = $_SESSION['flash'];
     unset($_SESSION['flash']);
 }
-
-$pengajuan = $_SESSION['pengajuan'];
 ?>
 
-<div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
-  <div class="flex items-center mb-4">
-    <span class="text-base font-semibold text-slate-800">Recent Country Visit</span>
-    <a href="#" class="ml-auto text-sm font-medium text-slate-500 hover:text-slate-800 px-2 py-1 rounded-md hover:bg-slate-100">View all</a>
-  </div>
+<div class="max-w-4xl mx-auto space-y-6">
 
   <?php if ($flash): ?>
-    <div class="mb-4 px-4 py-3 rounded-lg text-sm <?= $flash['type'] === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200' ?>">
-      <?= $e($flash['msg']) ?>
+    <div class="px-4 py-3.5 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2 <?= $flash['type'] === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200' ?>">
+      <svg class="w-4 h-4 shrink-0 <?= $flash['type'] === 'success' ? 'text-emerald-600' : 'text-rose-600' ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span><?= $e($flash['msg']) ?></span>
     </div>
   <?php endif; ?>
 
-  <div class="overflow-x-auto">
-    <table class="w-full text-sm text-left">
-      <thead class="bg-slate-50 text-xs uppercase text-slate-500">
-        <tr>
-          <th scope="col" class="px-4 py-3 font-medium">ID</th>
-          <th scope="col" class="px-4 py-3 font-medium">Nama Kegiatan</th>
-          <th scope="col" class="px-4 py-3 font-medium">Nama Peserta</th>
-          <th scope="col" class="px-4 py-3 font-medium">Jabatan</th>
-          <th scope="col" class="px-4 py-3 font-medium">Tanggal Keberangkatan</th>
-          <th scope="col" class="px-4 py-3 font-medium">Status</th>
-          <th scope="col" class="px-4 py-3 font-medium">Aksi</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-100">
-        <?php if (empty($pengajuan)): ?>
-          <tr>
-            <td colspan="7" class="px-4 py-3 text-slate-500">Belum ada pengajuan.</td>
-          </tr>
-        <?php endif; ?>
-
-        <?php foreach ($pengajuan as $p): ?>
-          <tr class="hover:bg-slate-50 align-middle">
-            <th scope="row" class="px-4 py-3 font-normal">
-              <code class="font-mono text-xs text-blue-600">#<?= (int)$p['id'] ?></code>
-            </th>
-            <td class="px-4 py-3 font-medium text-slate-800"><?= $e($p['kegiatan']) ?></td>
-            <td class="px-4 py-3 text-slate-600 whitespace-nowrap"><?= $e($p['peserta']) ?></td>
-            <td class="px-4 py-3 text-slate-600"><?= $e($p['jabatan']) ?></td>
-            <td class="px-4 py-3 text-slate-600 whitespace-nowrap"><?= $e(date('d M Y', strtotime($p['tanggal']))) ?></td>
-            <td class="px-4 py-3">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $badge[$p['status']] ?? 'bg-slate-100 text-slate-700' ?>">
-                <?= $e($p['status']) ?>
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <button type="button" data-open-modal
-                data-id="<?= (int)$p['id'] ?>"
-                data-kegiatan="<?= $e($p['kegiatan']) ?>"
-                data-peserta="<?= $e($p['peserta']) ?>"
-                data-status="<?= $e($p['status']) ?>"
-                data-sp="<?= $e($p['sp_setneg'] ?? '') ?>"
-                class="px-3 py-1 text-xs font-medium text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50">
-                View
-              </button>
-            </td>
-          </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Modal: Upload SP Setneg + Update Status -->
-<div id="modal-spsetneg" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/20 rounded-4xl p-4">
-  <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-6 ">
-    <div class="flex items-start justify-between mb-4">
-      <div>
-        <h3 class="text-lg font-semibold text-slate-800">Detail Pengajuan</h3>
-        <p id="modal-info" class="text-sm text-slate-500"></p>
-      </div>
-      <button type="button" data-close-modal class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
-    </div>
-
-    <form action="" method="POST" enctype="multipart/form-data" class="space-y-4">
-      <input type="hidden" name="action" value="update_status">
+  <!-- Card Form Utama -->
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 sm:p-8">
+    <form action="" method="POST" enctype="multipart/form-data" class="space-y-7">
+      <input type="hidden" name="action" value="submit_pdln">
       <input type="hidden" name="csrf" value="<?= $e($_SESSION['csrf']) ?>">
-      <input type="hidden" name="pengajuan_id" id="modal-id">
 
-      <div>
-        <label for="modal-status" class="block text-sm font-medium text-slate-700 mb-1">Status</label>
-        <select id="modal-status" name="status" required
-          class="block w-full text-sm text-slate-700 border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200">
-          <?php foreach ($statusList as $s): ?>
-            <option value="<?= $e($s) ?>"><?= $e($s) ?></option>
+      <!-- 01 DATA KEGIATAN -->
+      <div class="space-y-4">
+        <div class="flex items-center gap-2.5 border-b border-slate-100 pb-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-md bg-[#008C95] text-white text-xs font-bold shadow-xs">01</span>
+          <span class="font-bold text-xs uppercase tracking-wider text-[#008C95]">DATA KEGIATAN</span>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+            EMAIL PENGAJU <span class="text-rose-500">*</span>
+          </label>
+          <input type="email" name="email_pengaju" required placeholder="contoh@pnj.ac.id"
+            class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+            JENIS KEGIATAN <span class="text-rose-500">*</span>
+          </label>
+          <select name="jenis_kegiatan" required
+            class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+            <option value="">Pilih jenis kegiatan</option>
+            <option value="Konferensi / Seminar">Konferensi / Seminar</option>
+            <option value="Kompetisi">Kompetisi / Lomba / Hackathon</option>
+            <option value="Pelatihan">Pelatihan / Workshop / Short Course</option>
+            <option value="Pameran / Expo">Pameran / Expo</option>
+            <option value="Studi Banding">Studi Banding / Kunjungan Kerja</option>
+            <option value="Riset Kolaborasi">Riset Kolaborasi</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+            NAMA KEGIATAN <span class="text-rose-500">*</span>
+          </label>
+          <input type="text" name="nama_kegiatan" required placeholder="Nama konferensi, seminar, dsb."
+            class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              TANGGAL KEGIATAN MULAI <span class="text-rose-500">*</span>
+            </label>
+            <input type="date" name="tanggal_mulai" required
+              class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              TANGGAL KEGIATAN SELESAI <span class="text-rose-500">*</span>
+            </label>
+            <input type="date" name="tanggal_selesai" required
+              class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              NAMA INSTITUSI TUJUAN <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" name="institusi_tujuan" required placeholder="Nama universitas / lembaga"
+              class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              TEMPAT KEGIATAN <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" name="tempat_kegiatan" required placeholder="Contoh: Tokyo, Jepang"
+              class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+            RENCANA TINDAK LANJUT <span class="text-rose-500">*</span>
+          </label>
+          <textarea name="rencana_tindak_lanjut" rows="3" required placeholder="Tuliskan rencana tindak lanjut pasca kegiatan..."
+            class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition"></textarea>
+        </div>
+      </div>
+
+      <!-- 02 UPLOAD DOKUMEN PDLN -->
+      <div class="space-y-4 pt-3 border-t border-slate-100">
+        <div class="flex items-center gap-2.5 border-b border-slate-100 pb-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-md bg-[#008C95] text-white text-xs font-bold shadow-xs">02</span>
+          <span class="font-bold text-xs uppercase tracking-wider text-[#008C95]">UPLOAD DOKUMEN PDLN</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          <?php
+          $docsConfig = [
+            ['key' => 'tor', 'label' => 'TOR KEGIATAN', 'req' => true, 'badge' => null, 'tmpl' => true],
+            ['key' => 'memo', 'label' => 'MEMO PERSETUJUAN', 'req' => false, 'badge' => null, 'tmpl' => true],
+            ['key' => 'surat_tugas', 'label' => 'SURAT TUGAS', 'req' => true, 'badge' => null, 'tmpl' => true],
+            ['key' => 'undangan', 'label' => 'UNDANGAN', 'req' => true, 'badge' => null, 'tmpl' => true],
+            ['key' => 'jadwal', 'label' => 'JADWAL KEGIATAN', 'req' => true, 'badge' => null, 'tmpl' => true],
+            ['key' => 'setneg', 'label' => 'SURAT PERSETUJUAN SETNEG', 'req' => true, 'badge' => null, 'tmpl' => true],
+            ['key' => 'relevansi', 'label' => 'SURAT KETERANGAN RELEVANSI', 'req' => true, 'badge' => null, 'tmpl' => true],
+            ['key' => 'pembiayaan', 'label' => 'SURAT PERNYATAAN PEMBIAYAAN', 'req' => true, 'badge' => null, 'tmpl' => true],
+            ['key' => 'draft_mou', 'label' => 'DRAFT MOU / MOA', 'req' => false, 'badge' => 'OPSIONAL', 'tmpl' => true],
+            ['key' => 'brosur', 'label' => 'BROSUR', 'req' => false, 'badge' => 'OPSIONAL', 'tmpl' => false],
+            ['key' => 'bukti_registrasi', 'label' => 'BUKTI REGISTRASI', 'req' => false, 'badge' => 'OPSIONAL', 'tmpl' => false],
+            ['key' => 'clearance_letter', 'label' => 'CLEARANCE LETTER', 'req' => false, 'badge' => 'JIKA ADA', 'tmpl' => false],
+          ];
+          foreach ($docsConfig as $d):
+          ?>
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    <?= $d['label'] ?> <?= $d['req'] ? '<span class="text-rose-500">*</span>' : '' ?>
+                  </span>
+                  <?php if ($d['badge']): ?>
+                    <span class="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-indigo-50 text-indigo-600 rounded">
+                      <?= $d['badge'] ?>
+                    </span>
+                  <?php endif; ?>
+                </div>
+                <?php if ($d['tmpl']): ?>
+                  <a href="#" class="text-xs font-semibold text-[#008C95] hover:underline">Template</a>
+                <?php endif; ?>
+              </div>
+              <label class="group relative flex items-center gap-3 p-2 border-2 border-dashed border-cyan-200/90 hover:border-[#008C95] rounded-xl bg-cyan-50/20 hover:bg-cyan-50/50 transition cursor-pointer">
+                <input type="file" name="doc_<?= $d['key'] ?>" class="pdln-file-input sr-only" data-target="name-<?= $d['key'] ?>" accept=".pdf">
+                <span class="px-3 py-1.5 text-xs font-medium bg-slate-100 group-hover:bg-white text-slate-700 border border-slate-300 rounded-lg shrink-0 transition">Choose File</span>
+                <span id="name-<?= $d['key'] ?>" class="text-xs text-slate-500 truncate flex-1 font-mono">No file chosen</span>
+              </label>
+            </div>
           <?php endforeach; ?>
-        </select>
+
+        </div>
       </div>
 
-      <div>
-        <label for="sp_setneg" class="block text-sm font-medium text-slate-700 mb-1">File SP Setneg (PDF, maks 5 MB)</label>
-        <input type="file" id="sp_setneg" name="sp_setneg" accept="application/pdf"
-          class="block w-full text-sm text-slate-600 border border-slate-300 rounded-lg cursor-pointer file:mr-3 file:px-3 file:py-2 file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
-        <p id="modal-sp-current" class="hidden mt-2 text-xs text-slate-500">
-          File saat ini:
-          <a id="modal-sp-link" href="#" target="_blank" class="text-blue-600 hover:underline"></a>
-        </p>
-        <p class="mt-1 text-xs text-slate-400">Wajib ada SP Setneg untuk status Disetujui.</p>
+      <!-- 03 DATA PESERTA KEGIATAN -->
+      <div class="space-y-4 pt-3 border-t border-slate-100">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+          <div class="flex items-center gap-2.5">
+            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-[#008C95] text-white text-xs font-bold shadow-xs">03</span>
+            <span class="font-bold text-xs uppercase tracking-wider text-[#008C95]">DATA PESERTA KEGIATAN</span>
+          </div>
+          <button type="button" id="btn-add-peserta" class="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-[#008C95] hover:bg-cyan-50 rounded-lg border border-[#008C95]/30 transition cursor-pointer">
+            + Tambah Peserta
+          </button>
+        </div>
+
+        <div id="peserta-container" class="space-y-6">
+          <!-- Default Peserta 1 -->
+          <div class="peserta-card border border-slate-200/90 rounded-2xl p-5 bg-white space-y-4 shadow-xs relative">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <span class="text-xs font-bold uppercase tracking-wider text-[#008C95]">PESERTA 1</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  NAMA LENGKAP & GELAR <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" name="peserta[0][nama]" required
+                  class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  NIP <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" name="peserta[0][nip]" placeholder="Isi strip (-) jika PPPK/Non PNS" required
+                  class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  NIK <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" name="peserta[0][nik]" required
+                  class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  NOMOR PASPOR <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" name="peserta[0][paspor]" required
+                  class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  JENIS JABATAN <span class="text-rose-500">*</span>
+                </label>
+                <select name="peserta[0][jenis_jabatan]" required
+                  class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+                  <option value="">Pilih jabatan</option>
+                  <option value="Dosen">Dosen</option>
+                  <option value="Mahasiswa">Mahasiswa</option>
+                  <option value="Tenaga Kependidikan">Tenaga Kependidikan</option>
+                  <option value="Pimpinan / Struktural">Pimpinan / Struktural</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  NAMA JABATAN <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" name="peserta[0][nama_jabatan]" placeholder="Sesuai tertera dalam surat" required
+                  class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  EMAIL PESERTA <span class="text-rose-500">*</span>
+                </label>
+                <input type="email" name="peserta[0][email]" required
+                  class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  NOMOR TELEPON <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" name="peserta[0][telepon]" required
+                  class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">KTP</label>
+                <label class="group relative flex items-center gap-3 p-2 border-2 border-dashed border-cyan-200/90 hover:border-[#008C95] rounded-xl bg-cyan-50/20 hover:bg-cyan-50/50 transition cursor-pointer">
+                  <input type="file" name="peserta[0][ktp]" class="pdln-file-input sr-only" data-target="name-ktp-0" accept=".pdf,.jpg,.jpeg,.png">
+                  <span class="px-3 py-1.5 text-xs font-medium bg-slate-100 group-hover:bg-white text-slate-700 border border-slate-300 rounded-lg shrink-0 transition">Choose File</span>
+                  <span id="name-ktp-0" class="text-xs text-slate-500 truncate flex-1 font-mono">No file chosen</span>
+                </label>
+              </div>
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">PASPOR</label>
+                <label class="group relative flex items-center gap-3 p-2 border-2 border-dashed border-cyan-200/90 hover:border-[#008C95] rounded-xl bg-cyan-50/20 hover:bg-cyan-50/50 transition cursor-pointer">
+                  <input type="file" name="peserta[0][paspor]" class="pdln-file-input sr-only" data-target="name-paspor-0" accept=".pdf,.jpg,.jpeg,.png">
+                  <span class="px-3 py-1.5 text-xs font-medium bg-slate-100 group-hover:bg-white text-slate-700 border border-slate-300 rounded-lg shrink-0 transition">Choose File</span>
+                  <span id="name-paspor-0" class="text-xs text-slate-500 truncate flex-1 font-mono">No file chosen</span>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">APAKAH ADA PESERTA LAINNYA?</label>
+              <select class="peserta-lain-select w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] transition">
+                <option value="Tidak" selected>Tidak</option>
+                <option value="Ya">Ya</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="flex justify-end gap-2 pt-2">
-        <button type="button" data-close-modal class="px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100">Batal</button>
-        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Simpan</button>
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-end gap-3 pt-5 border-t border-slate-100">
+        <button type="reset" class="px-5 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer">
+          Batal
+        </button>
+        <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white bg-[#008C95] hover:bg-[#00747c] active:scale-98 rounded-xl transition shadow-md shadow-[#008C95]/20 cursor-pointer">
+          Kirim Pengajuan
+        </button>
       </div>
     </form>
   </div>
+
 </div>
 
 <script>
   (function () {
-    const modal = document.getElementById("modal-spsetneg"); // sesuaikan id per halaman
-document.body.appendChild(modal);
-    const uploadUrl = <?= json_encode($uploadUrl) ?>;
+    const bindInputs = () => {
+      document.querySelectorAll('.pdln-file-input').forEach(input => {
+        input.onchange = function () {
+          const target = document.getElementById(this.dataset.target);
+          if (target) {
+            target.textContent = (this.files && this.files.length > 0) ? this.files[0].name : "No file chosen";
+            target.className = (this.files && this.files.length > 0) ? "text-xs text-[#008C95] font-semibold truncate flex-1 font-mono" : "text-xs text-slate-500 truncate flex-1 font-mono";
+          }
+        };
+      });
+    };
+    bindInputs();
 
-    const toggle = (show) => {
-      modal.classList.toggle("hidden", !show);
-      modal.classList.toggle("flex", show);
+    const container = document.getElementById('peserta-container');
+    const btnAdd = document.getElementById('btn-add-peserta');
+
+    const createPesertaCard = (idx) => {
+      const card = document.createElement('div');
+      card.className = "peserta-card border border-slate-200/90 rounded-2xl p-5 bg-white space-y-4 shadow-xs relative";
+      card.innerHTML = `
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <span class="text-xs font-bold uppercase tracking-wider text-[#008C95]">PESERTA ${idx + 1}</span>
+          <button type="button" class="btn-remove-peserta text-xs text-rose-500 hover:text-rose-700 font-semibold cursor-pointer">
+            Hapus Peserta
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              NAMA LENGKAP & GELAR <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" name="peserta[${idx}][nama]" required
+              class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              NIP <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" name="peserta[${idx}][nip]" placeholder="Isi strip (-) jika PPPK/Non PNS" required
+              class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              NIK <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" name="peserta[${idx}][nik]" required
+              class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              NOMOR PASPOR <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" name="peserta[${idx}][paspor]" required
+              class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              JENIS JABATAN <span class="text-rose-500">*</span>
+            </label>
+            <select name="peserta[${idx}][jenis_jabatan]" required
+              class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+              <option value="">Pilih jabatan</option>
+              <option value="Dosen">Dosen</option>
+              <option value="Mahasiswa">Mahasiswa</option>
+              <option value="Tenaga Kependidikan">Tenaga Kependidikan</option>
+              <option value="Pimpinan / Struktural">Pimpinan / Struktural</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              NAMA JABATAN <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" name="peserta[${idx}][nama_jabatan]" placeholder="Sesuai tertera dalam surat" required
+              class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              EMAIL PESERTA <span class="text-rose-500">*</span>
+            </label>
+            <input type="email" name="peserta[${idx}][email]" required
+              class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              NOMOR TELEPON <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" name="peserta[${idx}][telepon]" required
+              class="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">KTP</label>
+            <label class="group relative flex items-center gap-3 p-2 border-2 border-dashed border-cyan-200/90 hover:border-[#008C95] rounded-xl bg-cyan-50/20 hover:bg-cyan-50/50 transition cursor-pointer">
+              <input type="file" name="peserta[${idx}][ktp]" class="pdln-file-input sr-only" data-target="name-ktp-${idx}" accept=".pdf,.jpg,.jpeg,.png">
+              <span class="px-3 py-1.5 text-xs font-medium bg-slate-100 group-hover:bg-white text-slate-700 border border-slate-300 rounded-lg shrink-0 transition">Choose File</span>
+              <span id="name-ktp-${idx}" class="text-xs text-slate-500 truncate flex-1 font-mono">No file chosen</span>
+            </label>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">PASPOR</label>
+            <label class="group relative flex items-center gap-3 p-2 border-2 border-dashed border-cyan-200/90 hover:border-[#008C95] rounded-xl bg-cyan-50/20 hover:bg-cyan-50/50 transition cursor-pointer">
+              <input type="file" name="peserta[${idx}][paspor]" class="pdln-file-input sr-only" data-target="name-paspor-${idx}" accept=".pdf,.jpg,.jpeg,.png">
+              <span class="px-3 py-1.5 text-xs font-medium bg-slate-100 group-hover:bg-white text-slate-700 border border-slate-300 rounded-lg shrink-0 transition">Choose File</span>
+              <span id="name-paspor-${idx}" class="text-xs text-slate-500 truncate flex-1 font-mono">No file chosen</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">APAKAH ADA PESERTA LAINNYA?</label>
+          <select class="peserta-lain-select w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] transition">
+            <option value="Tidak" selected>Tidak</option>
+            <option value="Ya">Ya</option>
+          </select>
+        </div>
+      `;
+
+      card.querySelector('.btn-remove-peserta')?.addEventListener('click', () => {
+        card.remove();
+        container.querySelectorAll('.peserta-card').forEach((c, i) => {
+          c.querySelector('span').textContent = `PESERTA ${i + 1}`;
+        });
+      });
+
+      card.querySelector('.peserta-lain-select')?.addEventListener('change', function () {
+        if (this.value === 'Ya') {
+          btnAdd.click();
+        }
+      });
+
+      return card;
     };
 
-    document.querySelectorAll("[data-open-modal]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const d = btn.dataset;
-        document.getElementById("modal-id").value = d.id;
-        document.getElementById("modal-info").textContent = "#" + d.id + " · " + d.kegiatan + " · " + d.peserta;
-        document.getElementById("sp_setneg").value = "";
-
-        // Status "Baru Diajukan" tidak ada di pilihan, default ke Diproses
-        const select = document.getElementById("modal-status");
-        select.value = [...select.options].some((o) => o.value === d.status) ? d.status : "Diproses";
-
-        const cur = document.getElementById("modal-sp-current");
-        const link = document.getElementById("modal-sp-link");
-        if (d.sp) {
-          link.textContent = d.sp;
-          link.href = uploadUrl + encodeURIComponent(d.sp);
-          cur.classList.remove("hidden");
-        } else {
-          cur.classList.add("hidden");
-        }
-        toggle(true);
-      });
+    btnAdd?.addEventListener('click', () => {
+      const currentCount = container.querySelectorAll('.peserta-card').length;
+      container.appendChild(createPesertaCard(currentCount));
+      bindInputs();
     });
 
-    document.querySelectorAll("[data-close-modal]").forEach((b) => b.addEventListener("click", () => toggle(false)));
-    modal.addEventListener("click", (ev) => { if (ev.target === modal) toggle(false); });
-    document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") toggle(false); });
+    document.querySelectorAll('.peserta-lain-select').forEach(sel => {
+      sel.addEventListener('change', function () {
+        if (this.value === 'Ya') {
+          btnAdd.click();
+        }
+      });
+    });
   })();
 </script>

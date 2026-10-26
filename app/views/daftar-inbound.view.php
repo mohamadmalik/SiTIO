@@ -1,87 +1,80 @@
 <?php
 
 /* ---------- Konfigurasi ---------- */
-$uploadDir  = __DIR__ . '/../../public/uploads/laporan_inbound/'; // sesuaikan dengan struktur proyekmu
-$uploadUrl  = '/uploads/laporan_inbound/';
-$maxSize    = 5 * 1024 * 1024; // 5 MB
-$statusList = ['Terjadwal', 'Berlangsung', 'Selesai', 'Dibatalkan'];
-$badge = [
-    'Terjadwal'   => 'bg-sky-100 text-sky-700',
-    'Berlangsung' => 'bg-amber-100 text-amber-700',
-    'Selesai'     => 'bg-green-100 text-green-700',
-    'Dibatalkan'  => 'bg-red-100 text-red-700',
-];
-$e = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+$uploadDir  = __DIR__ . '/../../public/uploads/inbound_docs/';
+$uploadUrl  = '/uploads/inbound_docs/';
+$maxSize    = 10 * 1024 * 1024; // 10 MB
 
-/* ---------- Data dummy ---------- */
-if (!isset($_SESSION['inbound'])) {
-    $_SESSION['inbound'] = [
-        ['id' => 401, 'kegiatan' => 'Guest Lecture',          'negara' => 'Jepang',        'peserta' => 'Prof. Kenji Tanaka',   'instansi' => 'Tokyo Institute of Technology', 'datang' => '2026-11-10', 'pulang' => '2026-11-14', 'status' => 'Terjadwal',   'dokumen' => null],
-        ['id' => 402, 'kegiatan' => 'Joint Research',         'negara' => 'Jerman',        'peserta' => 'Dr. Anna Schmidt',     'instansi' => 'TU Munich',                     'datang' => '2026-10-22', 'pulang' => '2026-10-28', 'status' => 'Berlangsung', 'dokumen' => null],
-        ['id' => 403, 'kegiatan' => 'Student Exchange',       'negara' => 'Malaysia',      'peserta' => 'Nur Aisyah',           'instansi' => 'Universiti Teknologi Malaysia', 'datang' => '2026-08-05', 'pulang' => '2026-09-05', 'status' => 'Selesai',     'dokumen' => null],
-        ['id' => 404, 'kegiatan' => 'Kunjungan Benchmarking', 'negara' => 'Singapura',     'peserta' => 'Dr. Wei Lim',          'instansi' => 'Singapore Polytechnic',         'datang' => '2026-12-02', 'pulang' => '2026-12-04', 'status' => 'Terjadwal',   'dokumen' => null],
-        ['id' => 405, 'kegiatan' => 'Workshop Teknis',        'negara' => 'Korea Selatan', 'peserta' => 'Min-jun Park',         'instansi' => 'KAIST',                         'datang' => '2026-09-15', 'pulang' => '2026-09-18', 'status' => 'Dibatalkan',  'dokumen' => null],
-        ['id' => 406, 'kegiatan' => 'Seminar Internasional',  'negara' => 'Australia',     'peserta' => 'Prof. Emma Wilson',    'instansi' => 'University of Melbourne',       'datang' => '2026-07-20', 'pulang' => '2026-07-23', 'status' => 'Selesai',     'dokumen' => null],
-    ];
-}
+$e = fn($v) => htmlspecialchars((string)($v ?? ''), ENT_QUOTES, 'UTF-8');
+
 $_SESSION['csrf'] = $_SESSION['csrf'] ?? bin2hex(random_bytes(16));
 
-/* ---------- Handler POST ---------- */
+/* ---------- Handler POST: Pengajuan Inbound Baru ---------- */
 $flash = $_SESSION['flash'] ?? null;
 unset($_SESSION['flash']);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_inbound') {
-    $error  = null;
-    $id     = (int)($_POST['inbound_id'] ?? 0);
-    $status = (string)($_POST['status'] ?? '');
-    $idx    = array_search($id, array_column($_SESSION['inbound'], 'id'), true);
-
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submit_inbound') {
     $sessionCsrf   = $_SESSION['csrf'] ?? '';
     $submittedCsrf = (string)($_POST['csrf'] ?? '');
 
     if (!is_string($sessionCsrf) || !hash_equals($sessionCsrf, $submittedCsrf)) {
-        $error = 'Sesi tidak valid, silakan muat ulang halaman.';
-    } elseif ($idx === false) {
-        $error = 'Data inbound tidak ditemukan.';
-    } elseif (!in_array($status, $statusList, true)) {
-        $error = 'Status tidak valid.';
-    }
+        $_SESSION['flash'] = ['type' => 'error', 'msg' => 'Sesi tidak valid, silakan muat ulang halaman.'];
+    } else {
+        $nama            = trim((string)($_POST['nama'] ?? ''));
+        $paspor          = trim((string)($_POST['paspor'] ?? ''));
+        $kewarganegaraan = trim((string)($_POST['kewarganegaraan'] ?? ''));
+        $instansi_asal   = trim((string)($_POST['instansi_asal'] ?? ''));
+        $tujuan          = trim((string)($_POST['tujuan'] ?? ''));
+        $durasi          = trim((string)($_POST['durasi'] ?? ''));
+        $tanggal_datang  = trim((string)($_POST['tanggal_datang'] ?? ''));
+        $tanggal_pulang  = trim((string)($_POST['tanggal_pulang'] ?? ''));
 
-    // Upload laporan kunjungan (opsional kalau sudah pernah diupload)
-    $file = $_FILES['dokumen'] ?? null;
-    if (!$error && $file && $file['error'] !== UPLOAD_ERR_NO_FILE) {
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            $error = 'Upload gagal, coba lagi.';
-        } elseif ($file['size'] > $maxSize) {
-            $error = 'Ukuran file maksimal 5 MB.';
-        } elseif ((new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']) !== 'application/pdf') {
-            $error = 'File harus berformat PDF.';
+        if ($nama === '' || $paspor === '' || $kewarganegaraan === '' || $tujuan === '') {
+            $_SESSION['flash'] = ['type' => 'error', 'msg' => 'Mohon lengkapi seluruh field wajib bertanda bintang (*).'];
         } else {
             if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
+                @mkdir($uploadDir, 0755, true);
             }
-            $name = 'laporan_' . $id . '_' . bin2hex(random_bytes(6)) . '.pdf';
-            if (move_uploaded_file($file['tmp_name'], $uploadDir . $name)) {
-                $_SESSION['inbound'][$idx]['dokumen'] = $name;
-            } else {
-                $error = 'File gagal disimpan di server.';
+
+            // Upload Dokumen Pendukung (CV / Surat Pengantar / Paspor) jika ada
+            $filePaspor = null;
+            if (isset($_FILES['file_paspor']) && $_FILES['file_paspor']['error'] === UPLOAD_ERR_OK) {
+                $f = $_FILES['file_paspor'];
+                $safeName = 'paspor_' . time() . '_' . preg_replace('/[^a-zA-Z0-9_\.-]/', '_', $f['name']);
+                if (move_uploaded_file($f['tmp_name'], $uploadDir . $safeName)) {
+                    $filePaspor = $safeName;
+                }
             }
+
+            // Simpan ke session daftar inbound user
+            if (!isset($_SESSION['inbound'])) {
+                $_SESSION['inbound'] = [];
+            }
+
+            $newId = count($_SESSION['inbound']) > 0 ? max(array_column($_SESSION['inbound'], 'id')) + 1 : 401;
+
+            $_SESSION['inbound'][] = [
+                'id'            => $newId,
+                'peserta'       => $nama,
+                'paspor'        => $paspor,
+                'negara'        => $kewarganegaraan,
+                'instansi'      => $instansi_asal,
+                'tujuan'        => $tujuan,
+                'durasi'        => $durasi,
+                'datang'        => $tanggal_datang,
+                'pulang'        => $tanggal_pulang,
+                'file_paspor'   => $filePaspor,
+                'status'        => 'Baru Diajukan',
+                'created_at'    => date('Y-m-d H:i:s')
+            ];
+
+            $_SESSION['flash'] = [
+                'type' => 'success',
+                'msg'  => "Formulir Ajuan Inbound atas nama \"{$nama}\" berhasil dikirim dan tersimpan!"
+            ];
         }
     }
 
-    // Aturan: untuk "Selesai", laporan kunjungan wajib ada
-    if (!$error && $status === 'Selesai' && empty($_SESSION['inbound'][$idx]['dokumen'])) {
-        $error = 'Upload laporan kunjungan dulu sebelum menandai selesai.';
-    }
-
-    if (!$error) {
-        $_SESSION['inbound'][$idx]['status'] = $status;
-        $_SESSION['flash'] = ['type' => 'success', 'msg' => "Inbound #{$id} diperbarui menjadi {$status}."];
-    } else {
-        $_SESSION['flash'] = ['type' => 'error', 'msg' => $error];
-    }
-
-    // Post-Redirect-Get (hanya jalan kalau belum ada output)
     if (!headers_sent()) {
         header('Location: ' . $_SERVER['REQUEST_URI']);
         exit;
@@ -89,157 +82,148 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     $flash = $_SESSION['flash'];
     unset($_SESSION['flash']);
 }
-
-$inbound = $_SESSION['inbound'];
 ?>
 
-<div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
-  <div class="flex items-center mb-4">
-    <span class="text-base font-semibold text-slate-800">Daftar Inbound</span>
-  </div>
+<div class="max-w-4xl mx-auto space-y-6">
+
+
 
   <?php if ($flash): ?>
-    <div class="mb-4 px-4 py-3 rounded-lg text-sm <?= $flash['type'] === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200' ?>">
-      <?= $e($flash['msg']) ?>
+    <div class="px-4 py-3.5 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2 <?= $flash['type'] === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200' ?>">
+      <svg class="w-4 h-4 shrink-0 <?= $flash['type'] === 'success' ? 'text-emerald-600' : 'text-rose-600' ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span><?= $e($flash['msg']) ?></span>
     </div>
   <?php endif; ?>
 
-  <div class="overflow-x-auto">
-    <table class="w-full text-sm text-left">
-      <thead class="bg-slate-50 text-xs uppercase text-slate-500">
-        <tr>
-          <th scope="col" class="px-4 py-3 font-medium">ID</th>
-          <th scope="col" class="px-4 py-3 font-medium">Nama Kegiatan</th>
-          <th scope="col" class="px-4 py-3 font-medium">Negara Asal</th>
-          <th scope="col" class="px-4 py-3 font-medium">Nama Tamu</th>
-          <th scope="col" class="px-4 py-3 font-medium">Instansi</th>
-          <th scope="col" class="px-4 py-3 font-medium">Periode</th>
-          <th scope="col" class="px-4 py-3 font-medium">Status</th>
-          <th scope="col" class="px-4 py-3 font-medium">Aksi</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-100">
-        <?php if (empty($inbound)): ?>
-          <tr>
-            <td colspan="8" class="px-4 py-3 text-slate-500">Belum ada data inbound.</td>
-          </tr>
-        <?php endif; ?>
-
-        <?php foreach ($inbound as $o): ?>
-          <tr class="hover:bg-slate-50 align-middle">
-            <th scope="row" class="px-4 py-3 font-normal">
-              <code class="font-mono text-xs text-blue-600">#<?= (int)$o['id'] ?></code>
-            </th>
-            <td class="px-4 py-3 font-medium text-slate-800"><?= $e($o['kegiatan']) ?></td>
-            <td class="px-4 py-3 text-slate-600"><?= $e($o['negara']) ?></td>
-            <td class="px-4 py-3 text-slate-600 whitespace-nowrap"><?= $e($o['peserta']) ?></td>
-            <td class="px-4 py-3 text-slate-600"><?= $e($o['instansi']) ?></td>
-            <td class="px-4 py-3 text-slate-600 whitespace-nowrap">
-              <?= $e(date('d M', strtotime($o['datang']))) ?> – <?= $e(date('d M Y', strtotime($o['pulang']))) ?>
-            </td>
-            <td class="px-4 py-3">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $badge[$o['status']] ?? 'bg-slate-100 text-slate-700' ?>">
-                <?= $e($o['status']) ?>
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <button type="button" data-open-modal
-                data-id="<?= (int)$o['id'] ?>"
-                data-kegiatan="<?= $e($o['kegiatan']) ?>"
-                data-peserta="<?= $e($o['peserta']) ?>"
-                data-negara="<?= $e($o['negara']) ?>"
-                data-status="<?= $e($o['status']) ?>"
-                data-doc="<?= $e($o['dokumen'] ?? '') ?>"
-                class="px-3 py-1 text-xs font-medium text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50">
-                View
-              </button>
-            </td>
-          </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Modal: Update Status + Upload Laporan Kunjungan -->
-<div id="modal-inbound" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/20 rounded-4xl p-4">
-  <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-6">
-    <div class="flex items-start justify-between mb-4">
-      <div>
-        <h3 class="text-lg font-semibold text-slate-800">Detail Inbound</h3>
-        <p id="modal-info" class="text-sm text-slate-500"></p>
-      </div>
-      <button type="button" data-close-modal class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
-    </div>
-
-    <form action="" method="POST" enctype="multipart/form-data" class="space-y-4">
-      <input type="hidden" name="action" value="update_inbound">
+  <!-- Card Form Utama -->
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 sm:p-8">
+    <form action="" method="POST" enctype="multipart/form-data" class="space-y-6">
+      <input type="hidden" name="action" value="submit_inbound">
       <input type="hidden" name="csrf" value="<?= $e($_SESSION['csrf']) ?>">
-      <input type="hidden" name="inbound_id" id="modal-id">
 
-      <div>
-        <label for="modal-status" class="block text-sm font-medium text-slate-700 mb-1">Status</label>
-        <select id="modal-status" name="status" required
-          class="block w-full text-sm text-slate-700 border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200">
-          <?php foreach ($statusList as $s): ?>
-            <option value="<?= $e($s) ?>"><?= $e($s) ?></option>
-          <?php endforeach; ?>
-        </select>
+      <!-- Section: Identitas Peserta Inbound -->
+      <div class="space-y-4">
+        <div class="flex items-center gap-2.5 border-b border-slate-100 pb-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-md bg-[#008C95] text-white text-xs font-bold shadow-xs">01</span>
+          <span class="font-bold text-xs uppercase tracking-wider text-[#008C95]">IDENTITAS PESERTA INBOUND</span>
+        </div>
+
+        <!-- Nama Lengkap -->
+        <div>
+          <label for="nama" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+            NAMA LENGKAP & GELAR <span class="text-rose-500">*</span>
+          </label>
+          <input type="text" id="nama" name="nama" required placeholder="Contoh: Prof. Kenji Tanaka, Ph.D"
+            class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+        </div>
+
+        <!-- Paspor & Kewarganegaraan -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="paspor" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              NOMOR PASPOR <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" id="paspor" name="paspor" required placeholder="Contoh: TK8899201"
+              class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition font-mono">
+          </div>
+          <div>
+            <label for="kewarganegaraan" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              KEWARGANEGARAAN <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" id="kewarganegaraan" name="kewarganegaraan" required placeholder="Contoh: Jepang / Jerman / Malaysia"
+              class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+          </div>
+        </div>
+
+        <!-- Instansi Asal -->
+        <div>
+          <label for="instansi_asal" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+            INSTITUSI / UNIVERSITAS ASAL
+          </label>
+          <input type="text" id="instansi_asal" name="instansi_asal" placeholder="Contoh: Tokyo Institute of Technology"
+            class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+        </div>
       </div>
 
-      <div>
-        <label for="dokumen" class="block text-sm font-medium text-slate-700 mb-1">Laporan Kunjungan (PDF, maks 5 MB)</label>
-        <input type="file" id="dokumen" name="dokumen" accept="application/pdf"
-          class="block w-full text-sm text-slate-600 border border-slate-300 rounded-lg cursor-pointer file:mr-3 file:px-3 file:py-2 file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
-        <p id="modal-doc-current" class="hidden mt-2 text-xs text-slate-500">
-          File saat ini:
-          <a id="modal-doc-link" href="#" target="_blank" class="text-blue-600 hover:underline"></a>
-        </p>
-        <p class="mt-1 text-xs text-slate-400">Wajib ada laporan kunjungan untuk status Selesai.</p>
+      <!-- Section: Detail Kunjungan & Tujuan -->
+      <div class="space-y-4 pt-3 border-t border-slate-100">
+        <div class="flex items-center gap-2.5 border-b border-slate-100 pb-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-md bg-[#008C95] text-white text-xs font-bold shadow-xs">02</span>
+          <span class="font-bold text-xs uppercase tracking-wider text-[#008C95]">DETAIL KUNJUNGAN KE PNJ</span>
+        </div>
+
+        <!-- Tujuan Kegiatan -->
+        <div>
+          <label for="tujuan" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+            TUJUAN KEGIATAN <span class="text-rose-500">*</span>
+          </label>
+          <textarea id="tujuan" name="tujuan" rows="3" required placeholder="Jelaskan tujuan kegiatan inbound (contoh: Guest lecture, workshop teknis, pertukaran mahasiswa, dsb.)..."
+            class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition"></textarea>
+        </div>
+
+        <!-- Estimasi Tanggal -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="tanggal_datang" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              RENCANA TANGGAL KEDATANGAN
+            </label>
+            <input type="date" id="tanggal_datang" name="tanggal_datang"
+              class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+          </div>
+          <div>
+            <label for="tanggal_pulang" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              RENCANA TANGGAL KEPULANGAN
+            </label>
+            <input type="date" id="tanggal_pulang" name="tanggal_pulang"
+              class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#008C95] focus:border-transparent transition">
+          </div>
+        </div>
+
+        <!-- Upload Salinan Paspor (PDF/Gambar) -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+            SALINAN PASPOR / IDENTITAS <span class="text-slate-400 font-normal lowercase">(opsional, PDF/JPG/PNG)</span>
+          </label>
+          <label class="group relative flex items-center gap-3 p-3 border-2 border-dashed border-cyan-200/90 hover:border-[#008C95] rounded-xl bg-cyan-50/20 hover:bg-cyan-50/50 transition cursor-pointer">
+            <input type="file" name="file_paspor" id="file_paspor" accept=".pdf,.jpg,.jpeg,.png" class="sr-only">
+            <span class="px-3.5 py-1.5 text-xs font-medium bg-slate-100 group-hover:bg-white text-slate-700 border border-slate-300 rounded-lg shrink-0 transition">
+              Choose File
+            </span>
+            <span id="file-paspor-name" class="text-xs text-slate-500 truncate flex-1 font-mono">
+              Belum ada file dipilih
+            </span>
+          </label>
+        </div>
       </div>
 
-      <div class="flex justify-end gap-2 pt-2">
-        <button type="button" data-close-modal class="px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100">Batal</button>
-        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Simpan</button>
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-end gap-3 pt-5 border-t border-slate-100">
+        <button type="reset" class="px-5 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer">
+          Reset Formulir
+        </button>
+        <button type="submit" class="px-6 py-2.5 text-sm font-bold text-white bg-[#008C95] hover:bg-[#00747c] active:scale-98 rounded-xl transition shadow-md shadow-[#008C95]/20 cursor-pointer">
+          Kirim Ajuan Inbound
+        </button>
       </div>
     </form>
   </div>
+
 </div>
 
 <script>
   (function () {
-        const modal = document.getElementById("modal-inbound"); // sesuaikan id per halaman
-document.body.appendChild(modal);
-    const uploadUrl = <?= json_encode($uploadUrl) ?>;
-
-    const toggle = (show) => {
-      modal.classList.toggle("hidden", !show);
-      modal.classList.toggle("flex", show);
-    };
-
-    document.querySelectorAll("[data-open-modal]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const d = btn.dataset;
-        document.getElementById("modal-id").value = d.id;
-        document.getElementById("modal-info").textContent = "#" + d.id + " · " + d.kegiatan + " · " + d.negara + " · " + d.peserta;
-        document.getElementById("dokumen").value = "";
-        document.getElementById("modal-status").value = d.status;
-
-        const cur = document.getElementById("modal-doc-current");
-        const link = document.getElementById("modal-doc-link");
-        if (d.doc) {
-          link.textContent = d.doc;
-          link.href = uploadUrl + encodeURIComponent(d.doc);
-          cur.classList.remove("hidden");
+    const fileInput = document.getElementById('file_paspor');
+    const fileNameDisplay = document.getElementById('file-paspor-name');
+    if (fileInput && fileNameDisplay) {
+      fileInput.addEventListener('change', function () {
+        if (this.files && this.files.length > 0) {
+          fileNameDisplay.textContent = this.files[0].name;
+          fileNameDisplay.className = "text-xs text-[#008C95] font-semibold truncate flex-1 font-mono";
         } else {
-          cur.classList.add("hidden");
+          fileNameDisplay.textContent = "Belum ada file dipilih";
+          fileNameDisplay.className = "text-xs text-slate-500 truncate flex-1 font-mono";
         }
-        toggle(true);
       });
-    });
-
-    document.querySelectorAll("[data-close-modal]").forEach((b) => b.addEventListener("click", () => toggle(false)));
-    modal.addEventListener("click", (ev) => { if (ev.target === modal) toggle(false); });
-    document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") toggle(false); });
+    }
   })();
 </script>
