@@ -1,7 +1,10 @@
 <?php declare(strict_types=1);
 
+$requestId = uniqid();
+
 class Router {
     protected array $routes = [];
+    public string $path = '';
 
     protected static function compilePattern(string $route): array {
         $fields = [];
@@ -98,6 +101,7 @@ class Router {
         }
 
         define("BASE_URL", $base);
+        $this->path = $path;
 
         // // Find match url
         foreach($this->routes[$method] as $route) {

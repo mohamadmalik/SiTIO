@@ -1,3 +1,9 @@
 RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^ public [L]
+
+# Existing files/directories inside public/
+RewriteCond %{DOCUMENT_ROOT}/php_template/public/$1 -f [OR]
+RewriteCond %{DOCUMENT_ROOT}/php_template/public/$1 -d
+RewriteRule ^(.+)$ public/$1 [END]
+
+# Everything else goes to the front controller
+RewriteRule ^ index.php [END]
